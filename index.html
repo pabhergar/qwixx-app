@@ -7,22 +7,27 @@
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="./src/css/style.css">
 </head>
+<!-- Modal Alert -->
 <div class="modal-overlay" id="custom-alert-modal">
-  <div class="modal-content" style="max-width: 380px;">
-      <h3 id="alert-title" style="margin-top: 0; color: #0f172a; font-size: 18px;">Atención</h3>
-      <p id="alert-message" style="font-size: 14px; color: #475569; margin: 15px 0; line-height: 1.4; white-space: pre-line;"></p>
-      <button class="net-btn" id="btn-close-alert" style="width: 100%;">Entendido</button>
-  </div>
+    <div class="modal-content" style="max-width: 380px;">
+        <h3 id="alert-title" style="margin-top: 0; color: #0f172a; font-size: 18px;">Atención</h3>
+        <p id="alert-message" style="font-size: 14px; color: #475569; margin: 15px 0; line-height: 1.4; white-space: pre-line;"></p>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-primary" id="btn-close-alert">Entendido</button>
+        </div>
+    </div>
 </div>
+
+<!-- Modal Confirm -->
 <div class="modal-overlay" id="custom-confirm-modal">
-  <div class="modal-content" style="max-width: 380px;">
-      <h3 id="confirm-title" style="margin-top: 0; color: #0f172a; font-size: 18px;">Confirmar acción</h3>
-      <p id="confirm-message" style="font-size: 14px; color: #475569; margin: 15px 0; line-height: 1.4; white-space: pre-line;"></p>
-      <div style="display: flex; gap: 10px;">
-          <button class="net-btn" id="btn-confirm-cancel" style="background: #cbd5e1; color: #334155; flex: 1;">Cancelar</button>
-          <button class="net-btn" id="btn-confirm-ok" style="background: #10b981; flex: 1;">Aceptar</button>
-      </div>
-  </div>
+    <div class="modal-content" style="max-width: 380px;">
+        <h3 id="confirm-title" style="margin-top: 0; color: #0f172a; font-size: 18px;">Confirmar acción</h3>
+        <p id="confirm-message" style="font-size: 14px; color: #475569; margin: 15px 0; line-height: 1.4; white-space: pre-line;"></p>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-secondary" id="btn-confirm-cancel">Cancelar</button>
+            <button class="modal-btn modal-btn-success" id="btn-confirm-ok">Aceptar</button>
+        </div>
+    </div>
 </div>
 <body>
 <div class="board-container">

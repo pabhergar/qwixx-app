@@ -170,3 +170,30 @@ h1 { text-align: center; color: #1e293b; margin: 0 0 10px 0; font-size: 22px; }
 .leaderboard-table th, .leaderboard-table td { border: 1px solid #cbd5e1; padding: 8px; text-align: center; }
 .leaderboard-table th { background: #f1f5f9; color: #475569; }
 .leaderboard-table tr:first-child td { font-weight: bold; color: #10b981; background: #ecfdf5; }
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    width: 100%;
+}
+
+.modal-btn {
+    flex: 1;
+    width: 100%;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.modal-btn:hover {
+    opacity: 0.9;
+}
+
+.modal-btn-primary { background-color: #3b82f6; color: white; }
+.modal-btn-success { background-color: #10b981; color: white; }
+.modal-btn-secondary { background-color: #cbd5e1; color: #334155; }

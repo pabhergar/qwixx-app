@@ -1,6 +1,7 @@
 import { state, resetTurnFlags, saveSessionState, colorNamesSpanish } from './state.js';
 import { applyDiceResults, updateTurnUI, updateCellHighlights, renderPlayerLists, lockRowGlobally, updateLeaderboardTable } from './ui.js';
 import { calculateScores, getClosedRows } from './game.js';
+import { showAlert, showConfirm } from './ui.js';
 
 export function broadcast(data) {
   if (state.isHost) state.connections.forEach(c => c.send(data));
@@ -9,7 +10,7 @@ export function broadcast(data) {
 
 export function handleNetworkData(data) {
   if (data.type === 'REJECTED') {
-    alert(data.reason); exitGame();
+    showAlert(data.reason); exitGame();
   } else if (data.type === 'WELCOME') {
     state.myPlayerId = data.playerId; state.playersList = data.players; state.activePlayerId = data.activePlayerId;
     renderPlayerLists(); saveSessionState();
@@ -151,7 +152,7 @@ export function handleRowClosureAlert(data) {
 
   renderPlayerLists();
   updateCellHighlights();
-  alert(`¡Atención! ${data.closingPlayerName} va a cerrar el color ${colorNamesSpanish[data.color] || data.color}.`);
+  showAlert(`¡Atención! ${data.closingPlayerName} va a cerrar el color ${colorNamesSpanish[data.color] || data.color}.`);
 }
 
 export function checkGameOver() {
@@ -191,8 +192,9 @@ export function showGameOverModal(reason) {
   document.getElementById('game-over-modal').style.display = 'flex';
 }
 
-export function exitGame() {
-  if (confirm('¿Abandonar la partida?')) {
+export async function exitGame() {
+  const confirmed = await showConfirm('¿Seguro que quieres abandonar la partida y borrar los datos guardados?', 'Salir del Juego');
+  if (confirmed) {
     localStorage.clear();
     window.location.reload();
   }

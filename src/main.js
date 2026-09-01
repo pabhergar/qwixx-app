@@ -2,6 +2,7 @@ import { state, resetTurnFlags, saveSessionState, colorNamesSpanish } from './js
 import { calculateScores, updateRowLockout } from './js/game.js';
 import { applyDiceResults, updateCellHighlights, renderPlayerLists, updateTurnUI, lockRowGlobally } from './js/ui.js';
 import { broadcast, handleHostConnection, handleNetworkData, processPlayerValidation, startGameUI, exitGame } from './js/network.js';
+import { showAlert, showConfirm } from './js/ui.js';
 
 window.addEventListener('DOMContentLoaded', () => {
   const savedName = localStorage.getItem('qwixx_player_name');
@@ -25,7 +26,7 @@ window.addEventListener('DOMContentLoaded', () => {
 function getAndValidateName() {
   const nameInput = document.getElementById('player-name-input');
   const name = nameInput.value.trim();
-  if (!name) { alert('Introduce tu nombre.'); nameInput.focus(); return null; }
+  if (!name) { showAlert('Introduce tu nombre.'); nameInput.focus(); return null; }
   localStorage.setItem('qwixx_player_name', name);
   return name;
 }
@@ -52,7 +53,7 @@ function joinRoom() {
   const name = getAndValidateName();
   if (!name) return;
   const inputCode = document.getElementById('room-code-input').value.trim();
-  if (!inputCode) return alert('Introduce un código.');
+  if (!inputCode) return showAlert('Introduce un código.');
 
   state.myPlayerName = name;
   state.roomCode = inputCode;
@@ -70,9 +71,17 @@ function joinRoom() {
   });
 }
 
-function startGame() {
+async function startGame() {
   if (!state.isHost) return;
-  state.activePlayerId = state.playersList[0].id; state.gameStarted = true; saveSessionState();
+
+  if (state.playersList.length < 2) {
+    const confirmSolo = await showConfirm('¿Quieres iniciar una partida en solitario?', 'Partida Individual');
+    if (!confirmSolo) return;
+  }
+
+  state.activePlayerId = state.playersList[0].id;
+  state.gameStarted = true;
+  saveSessionState();
   broadcast({ type: 'GAME_STARTED', players: state.playersList, activePlayerId: state.activePlayerId });
   startGameUI();
 }
@@ -105,7 +114,7 @@ function handleCellClick(cell) {
 
   if (cell.classList.contains('marked')) {
     if (state.myLockedClosuresThisTurn.has(color) && (val === '12' || val === '2' || val === 'lock')) {
-      return alert(`No puedes deshacer el cierre de ${colorNamesSpanish[color]}.`);
+      return showAlert(`No puedes deshacer el cierre de ${colorNamesSpanish[color]}.`);
     }
     const indexInTurn = state.markedThisTurn.findIndex(m => m.color === color && m.val === val);
     if (indexInTurn !== -1) {
@@ -152,13 +161,19 @@ function handleCellClick(cell) {
   saveSessionState();
 }
 
-function validateTurnAction() {
+async function validateTurnAction() {
   if (!state.gameStarted || state.gameOverTriggered || state.hasValidatedTurn) return;
   const isMyTurn = (state.myPlayerId === state.activePlayerId);
 
-  if (isMyTurn && !state.hasRolledInTurn) return alert('Debes lanzar dados.');
+  if (isMyTurn && !state.hasRolledInTurn) return showAlert('Debes lanzar dados.');
+
   if (isMyTurn && state.hasRolledInTurn && !state.hasMarkedInTurn) {
-    if (!confirm('¿Pasar turno sin marcar? Se anotará una falta (-5).')) return;
+    const confirmPenalty = await showConfirm(
+      'No has marcado ninguna casilla en tu turno. ¿Deseas pasar y anotarte una falta (-5 pts)?',
+      'Anotar Falta'
+    );
+    if (!confirmPenalty) return;
+
     const emptyPen = Array.from(document.querySelectorAll('.penalty-box')).find(p => !p.classList.contains('marked'));
     if (emptyPen) { emptyPen.classList.add('marked'); calculateScores(); }
   }

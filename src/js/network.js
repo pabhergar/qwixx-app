@@ -108,6 +108,7 @@ export function processPlayerValidation(playerId, playerName, pendingClosedRows 
     state.validatedPlayers.clear();
     const alertData = {
       type: 'ROW_CLOSURE_ALERT',
+      closingPlayerId: playerId,
       closingPlayerName: playerName,
       color: newlyClosedColor,
       declaredClosures: Array.from(state.declaredClosuresThisTurn)
@@ -152,7 +153,14 @@ export function handleRowClosureAlert(data) {
 
   renderPlayerLists();
   updateCellHighlights();
-  showAlert(`¡Atención! ${data.closingPlayerName} va a cerrar el color ${colorNamesSpanish[data.color] || data.color}.`);
+
+  // Solo se muestra el aviso a los demás jugadores
+  if (data.closingPlayerId !== state.myPlayerId) {
+    showAlert(
+      `¡Atención! ${data.closingPlayerName} va a cerrar el color ${colorNamesSpanish[data.color] || data.color}.\n\nSe han cancelado las validaciones del turno para que podáis reevaluar vuestra jugada.`,
+      '🔒 Fila Cerrada'
+    );
+  }
 }
 
 export function checkGameOver() {
@@ -192,10 +200,11 @@ export function showGameOverModal(reason) {
   document.getElementById('game-over-modal').style.display = 'flex';
 }
 
-export async function exitGame() {
-  const confirmed = await showConfirm('¿Seguro que quieres abandonar la partida y borrar los datos guardados?', 'Salir del Juego');
-  if (confirmed) {
-    localStorage.clear();
-    window.location.reload();
+export async function exitGame(force = false) {
+  if (!force && !state.gameOverTriggered) {
+    const confirmed = await showConfirm('¿Seguro que quieres abandonar la partida y borrar los datos guardados?', 'Salir del Juego');
+    if (!confirmed) return;
   }
+  localStorage.clear();
+  window.location.reload();
 }

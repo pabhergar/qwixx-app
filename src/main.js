@@ -15,7 +15,7 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-roll-dice').addEventListener('click', handleRollClick);
   document.getElementById('btn-validate-turn').addEventListener('click', validateTurnAction);
   document.getElementById('btn-exit-game').addEventListener('click', exitGame);
-  document.getElementById('btn-modal-exit').addEventListener('click', exitGame);
+  document.getElementById('btn-modal-exit').addEventListener('click', () => exitGame(true));
 
   // Delegación de eventos para las casillas
   document.getElementById('game-area').addEventListener('click', (e) => {

@@ -166,22 +166,27 @@ async function validateTurnAction() {
 
   const isMyTurn = (state.myPlayerId === state.activePlayerId);
 
-  // 1. Ningún jugador puede validar si los dados no se han lanzado aún
   if (!state.hasRolledInTurn) {
-    if (isMyTurn) {
-      return showAlert('Debes lanzar los dados antes de validar tu turno.');
-    } else {
-      return showAlert('Debes esperar a que el jugador activo lance los dados.');
-    }
+    if (isMyTurn) return showAlert('Debes lanzar los dados antes de validar tu turno.');
+    else return showAlert('Debes esperar a que el jugador activo lance los dados.');
   }
 
-  // 2. Si es tu turno y no has marcado nada, se pregunta por la falta
+  // Evaluación de faltas
   if (isMyTurn && !state.hasMarkedInTurn) {
-    const confirmPenalty = await showConfirm(
-      'No has marcado ninguna casilla en tu turno. ¿Deseas pasar y anotarte una falta (-5 pts)?',
-      'Anotar Falta'
-    );
-    if (!confirmPenalty) return;
+    if (state.isForcedPenalty) {
+      // Caso 1: Sin casillas válidas -> Transición informativa
+      await showAlert(
+        'Como no tienes combinaciones posibles con la tirada actual, cometes una falta obligatoria (-5 pts).',
+        'Sin Combinaciones Válidas'
+      );
+    } else {
+      // Caso 2: Tenía casillas pero elige pasar -> Pregunta de confirmación
+      const confirmPenalty = await showConfirm(
+        'No has marcado ninguna casilla en tu turno. ¿Deseas pasar y anotarte una falta (-5 pts)?',
+        'Anotar Falta'
+      );
+      if (!confirmPenalty) return;
+    }
 
     const emptyPen = Array.from(document.querySelectorAll('.penalty-box')).find(p => !p.classList.contains('marked'));
     if (emptyPen) {
@@ -190,10 +195,13 @@ async function validateTurnAction() {
     }
   }
 
-  // 3. Confirmar la validación
   state.hasValidatedTurn = true;
-  document.getElementById('btn-validate-turn').disabled = true;
-  document.getElementById('btn-validate-turn').innerText = 'Acción Validada ✔️';
+  const btnValidate = document.getElementById('btn-validate-turn');
+  if (btnValidate) {
+    btnValidate.disabled = true;
+    btnValidate.classList.remove('forced-penalty');
+    btnValidate.innerText = 'Acción Validada ✔️';
+  }
 
   updateCellHighlights();
   const pendingArray = Array.from(state.pendingClosedRowsThisTurn);

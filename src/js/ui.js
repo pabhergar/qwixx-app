@@ -183,6 +183,19 @@ export function updateCellHighlights() {
     }
   });
 
+  // Control de animación y estado para falta obligatoria
+  const btnValidate = document.getElementById('btn-validate-turn');
+  if (btnValidate) {
+    const hasNoOptions = (validWhiteCells.size === 0 && validColorCells.size === 0);
+    if (isMyTurn && state.hasRolledInTurn && !state.hasMarkedInTurn && hasNoOptions) {
+      btnValidate.classList.add('forced-penalty');
+      state.isForcedPenalty = true;
+    } else {
+      btnValidate.classList.remove('forced-penalty');
+      state.isForcedPenalty = false;
+    }
+  }
+
   allCells.forEach(cell => {
     cell.classList.remove('selectable', 'selectable-white', 'selectable-color', 'dimmed');
     if (cell.classList.contains('marked')) return;

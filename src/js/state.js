@@ -25,7 +25,8 @@ export const state = {
   myLockedClosuresThisTurn: new Set(),
   validatedPlayers: new Set(),
   playerScoresMap: {},
-  currentDiceResults: { w1: 1, w2: 1, r: 1, y: 1, g: 1, b: 1 }
+  currentDiceResults: { w1: 1, w2: 1, r: 1, y: 1, g: 1, b: 1 },
+  isForcedPenalty: false
 };
 
 export function resetTurnFlags() {
@@ -34,12 +35,15 @@ export function resetTurnFlags() {
   state.hasMarkedWhiteThisTurn = false;
   state.hasMarkedColorThisTurn = false;
   state.hasValidatedTurn = false;
+  state.isForcedPenalty = false; // Reset de la falta forzada
   state.markedThisTurn = [];
   state.pendingClosedRowsThisTurn.clear();
   state.myLockedClosuresThisTurn.clear();
+
   const btn = document.getElementById('btn-validate-turn');
   if (btn) {
     btn.disabled = false;
+    btn.classList.remove('forced-penalty');
     btn.innerText = 'Validar Acción ✔️';
   }
 }

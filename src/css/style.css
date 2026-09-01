@@ -197,3 +197,7 @@ h1 { text-align: center; color: #1e293b; margin: 0 0 10px 0; font-size: 22px; }
 .modal-btn-primary { background-color: #3b82f6; color: white; }
 .modal-btn-success { background-color: #10b981; color: white; }
 .modal-btn-secondary { background-color: #cbd5e1; color: #334155; }
+
+.btn-validate.forced-penalty {
+    animation: pulseRoll 0.9s infinite alternate !important;
+}

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Qwixx Online</title>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+<div class="board-container">
+    <h1>Qwixx Online</h1>
+
+    <div class="modal-overlay" id="game-over-modal">
+        <div class="modal-content">
+            <h2>🏆 Fin de la Partida</h2>
+            <div id="game-over-reason" style="font-size: 13px; color: #64748b; margin-bottom: 10px;"></div>
+            <table class="leaderboard-table">
+                <thead>
+                    <tr><th>Pos</th><th>Jugador</th><th>Puntos</th></tr>
+                </thead>
+                <tbody id="leaderboard-body"></tbody>
+            </table>
+            <button class="net-btn" id="btn-modal-exit" style="width: 100%; margin-top: 10px;">Volver al Inicio</button>
+        </div>
+    </div>
+
+    <div class="network-bar">
+        <div class="network-controls" id="net-setup">
+            <input type="text" id="player-name-input" class="net-input name" placeholder="Tu Nombre" maxlength="12">
+            <button class="net-btn" id="btn-create-room">Crear Sala</button>
+            <span style="font-size: 12px; font-weight: bold; color: #64748b;">O</span>
+            <input type="text" id="room-code-input" class="net-input code" placeholder="CÓDIGO" maxlength="4">
+            <button class="net-btn" id="btn-join-room" style="background:#10b981;">Unirse</button>
+        </div>
+
+        <div class="lobby-section" id="lobby-section">
+            <h3>Sala: <span id="display-room-code" class="room-code-display"></span></h3>
+            <div style="text-align: left; margin-bottom: 5px; font-size: 13px; font-weight: bold; color: #475569;">Jugadores en sala:</div>
+            <ul id="player-list" class="player-list"></ul>
+            
+            <div id="host-controls" style="display: none; margin-top: 15px;">
+                <button class="net-btn" id="btn-start-game" style="background:#10b981; width: 100%; font-size: 16px;">▶ Iniciar Partida</button>
+            </div>
+            
+            <div id="client-waiting" class="waiting-text" style="display: none;">
+                ⏳ Esperando a que el anfitrión inicie la partida...
+            </div>
+        </div>
+
+        <div class="status-badge" id="status-text" style="display: none;"></div>
+    </div>
+
+    <div class="turn-tracker" id="turn-tracker">
+        <div class="turn-tracker-title">Orden de Turno</div>
+        <div class="turn-list" id="turn-list"></div>
+    </div>
+
+    <div id="game-area">
+        <div class="dice-section">
+            <div class="dice-container">
+                <div class="die white1" id="die-w1">⚀</div>
+                <div class="die white2" id="die-w2">⚀</div>
+                <div class="die red" id="die-r">⚀</div>
+                <div class="die yellow" id="die-y">⚀</div>
+                <div class="die green" id="die-g">⚀</div>
+                <div class="die blue" id="die-b">⚀</div>
+            </div>
+            <button class="btn-roll" id="btn-roll-dice">Lanzar Dados 🎲</button>
+        </div>
+
+        <div class="row red" id="row-red">
+            <div class="cell" data-val="2">2</div><div class="cell" data-val="3">3</div><div class="cell" data-val="4">4</div><div class="cell" data-val="5">5</div><div class="cell" data-val="6">6</div><div class="cell" data-val="7">7</div><div class="cell" data-val="8">8</div><div class="cell" data-val="9">9</div><div class="cell" data-val="10">10</div><div class="cell" data-val="11">11</div><div class="cell" data-val="12">12</div><div class="cell lock" data-val="lock">🔒</div>
+        </div>
+
+        <div class="row yellow" id="row-yellow">
+            <div class="cell" data-val="2">2</div><div class="cell" data-val="3">3</div><div class="cell" data-val="4">4</div><div class="cell" data-val="5">5</div><div class="cell" data-val="6">6</div><div class="cell" data-val="7">7</div><div class="cell" data-val="8">8</div><div class="cell" data-val="9">9</div><div class="cell" data-val="10">10</div><div class="cell" data-val="11">11</div><div class="cell" data-val="12">12</div><div class="cell lock" data-val="lock">🔒</div>
+        </div>
+
+        <div class="row green" id="row-green">
+            <div class="cell" data-val="12">12</div><div class="cell" data-val="11">11</div><div class="cell" data-val="10">10</div><div class="cell" data-val="9">9</div><div class="cell" data-val="8">8</div><div class="cell" data-val="7">7</div><div class="cell" data-val="6">6</div><div class="cell" data-val="5">5</div><div class="cell" data-val="4">4</div><div class="cell" data-val="3">3</div><div class="cell" data-val="2">2</div><div class="cell lock" data-val="lock">🔒</div>
+        </div>
+
+        <div class="row blue" id="row-blue">
+            <div class="cell" data-val="12">12</div><div class="cell" data-val="11">11</div><div class="cell" data-val="10">10</div><div class="cell" data-val="9">9</div><div class="cell" data-val="8">8</div><div class="cell" data-val="7">7</div><div class="cell" data-val="6">6</div><div class="cell" data-val="5">5</div><div class="cell" data-val="4">4</div><div class="cell" data-val="3">3</div><div class="cell" data-val="2">2</div><div class="cell lock" data-val="lock">🔒</div>
+        </div>
+
+        <table class="points-reference">
+            <tr><th>Xs</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td><td>12</td></tr>
+            <tr><th>Pts</th><td>1</td><td>3</td><td>6</td><td>10</td><td>15</td><td>21</td><td>28</td><td>36</td><td>45</td><td>55</td><td>66</td><td>78</td></tr>
+        </table>
+
+        <div class="bottom-section">
+            <div class="penalties-container">
+                <span style="font-size: 13px; font-weight: bold; color: #334155;">Faltas (-5):</span>
+                <div class="penalty-box"></div><div class="penalty-box"></div><div class="penalty-box"></div><div class="penalty-box"></div>
+            </div>
+            <div class="score-calculator">
+                <div class="score-box red-total" id="total-red">0</div><span>+</span>
+                <div class="score-box yellow-total" id="total-yellow">0</div><span>+</span>
+                <div class="score-box green-total" id="total-green">0</div><span>+</span>
+                <div class="score-box blue-total" id="total-blue">0</div><span>-</span>
+                <div class="score-box penalty-total" id="total-penalty">0</div><span>=</span>
+                <div class="score-box final-total" id="total-final">0</div>
+            </div>
+            <div class="actions-container">
+                <button class="btn btn-validate" id="btn-validate-turn">Validar Acción ✔️</button>
+                <button class="btn btn-exit" id="btn-exit-game">Salir</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="module" src="./main.js"></script>
+</body>
+</html>

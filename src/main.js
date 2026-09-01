@@ -1,0 +1,178 @@
+import { state, resetTurnFlags, saveSessionState, colorNamesSpanish } from './js/state.js';
+import { calculateScores, updateRowLockout } from './js/game.js';
+import { applyDiceResults, updateCellHighlights, renderPlayerLists, updateTurnUI, lockRowGlobally } from './js/ui.js';
+import { broadcast, handleHostConnection, handleNetworkData, processPlayerValidation, startGameUI, exitGame } from './js/network.js';
+
+window.addEventListener('DOMContentLoaded', () => {
+  const savedName = localStorage.getItem('qwixx_player_name');
+  if (savedName) document.getElementById('player-name-input').value = savedName;
+
+  // Asignación de event listeners centralizados
+  document.getElementById('btn-create-room').addEventListener('click', createRoom);
+  document.getElementById('btn-join-room').addEventListener('click', joinRoom);
+  document.getElementById('btn-start-game').addEventListener('click', startGame);
+  document.getElementById('btn-roll-dice').addEventListener('click', handleRollClick);
+  document.getElementById('btn-validate-turn').addEventListener('click', validateTurnAction);
+  document.getElementById('btn-exit-game').addEventListener('click', exitGame);
+  document.getElementById('btn-modal-exit').addEventListener('click', exitGame);
+
+  // Delegación de eventos para las casillas
+  document.getElementById('game-area').addEventListener('click', (e) => {
+    if (e.target.classList.contains('cell')) handleCellClick(e.target);
+  });
+});
+
+function getAndValidateName() {
+  const nameInput = document.getElementById('player-name-input');
+  const name = nameInput.value.trim();
+  if (!name) { alert('Introduce tu nombre.'); nameInput.focus(); return null; }
+  localStorage.setItem('qwixx_player_name', name);
+  return name;
+}
+
+function createRoom() {
+  const name = getAndValidateName();
+  if (!name) return;
+  state.myPlayerName = name;
+  state.roomCode = Math.floor(1000 + Math.random() * 9000).toString();
+
+  state.peer = new Peer('qwixx-' + state.roomCode);
+  state.peer.on('open', () => {
+    state.isHost = true; state.myPlayerId = 'P1'; state.playersList = [{ id: 'P1', name: state.myPlayerName }];
+    document.getElementById('net-setup').style.display = 'none';
+    document.getElementById('lobby-section').style.display = 'block';
+    document.getElementById('display-room-code').innerText = state.roomCode;
+    document.getElementById('host-controls').style.display = 'block';
+    renderPlayerLists(); saveSessionState();
+  });
+  state.peer.on('connection', handleHostConnection);
+}
+
+function joinRoom() {
+  const name = getAndValidateName();
+  if (!name) return;
+  const inputCode = document.getElementById('room-code-input').value.trim();
+  if (!inputCode) return alert('Introduce un código.');
+
+  state.myPlayerName = name;
+  state.roomCode = inputCode;
+  state.peer = new Peer();
+  state.peer.on('open', () => {
+    state.hostConn = state.peer.connect('qwixx-' + inputCode);
+    state.hostConn.on('open', () => {
+      document.getElementById('net-setup').style.display = 'none';
+      document.getElementById('lobby-section').style.display = 'block';
+      document.getElementById('display-room-code').innerText = inputCode;
+      document.getElementById('client-waiting').style.display = 'block';
+      state.hostConn.send({ type: 'HANDSHAKE', name: state.myPlayerName });
+    });
+    state.hostConn.on('data', handleNetworkData);
+  });
+}
+
+function startGame() {
+  if (!state.isHost) return;
+  state.activePlayerId = state.playersList[0].id; state.gameStarted = true; saveSessionState();
+  broadcast({ type: 'GAME_STARTED', players: state.playersList, activePlayerId: state.activePlayerId });
+  startGameUI();
+}
+
+function handleRollClick() {
+  if (state.myPlayerId !== state.activePlayerId || state.hasRolledInTurn) return;
+
+  const res = {
+    w1: Math.floor(Math.random() * 6) + 1, w2: Math.floor(Math.random() * 6) + 1,
+    r: Math.floor(Math.random() * 6) + 1, y: Math.floor(Math.random() * 6) + 1,
+    g: Math.floor(Math.random() * 6) + 1, b: Math.floor(Math.random() * 6) + 1
+  };
+
+  resetTurnFlags();
+  state.hasRolledInTurn = true;
+  document.getElementById('btn-roll-dice').disabled = true;
+  state.currentDiceResults = res;
+  applyDiceResults(res);
+  updateCellHighlights();
+  saveSessionState();
+  broadcast({ type: 'DICE_ROLLED', dice: res });
+}
+
+function handleCellClick(cell) {
+  if (!state.gameStarted || !state.hasRolledInTurn || state.hasValidatedTurn || state.gameOverTriggered) return;
+
+  const row = cell.parentElement;
+  const color = row.id.replace('row-', '');
+  const val = cell.dataset.val;
+
+  if (cell.classList.contains('marked')) {
+    if (state.myLockedClosuresThisTurn.has(color) && (val === '12' || val === '2' || val === 'lock')) {
+      return alert(`No puedes deshacer el cierre de ${colorNamesSpanish[color]}.`);
+    }
+    const indexInTurn = state.markedThisTurn.findIndex(m => m.color === color && m.val === val);
+    if (indexInTurn !== -1) {
+      cell.classList.remove('marked', 'turn-marked');
+      state.markedThisTurn.splice(indexInTurn, 1);
+      state.hasMarkedWhiteThisTurn = state.markedThisTurn.some(m => m.actionType === 'white');
+      state.hasMarkedColorThisTurn = state.markedThisTurn.some(m => m.actionType === 'color');
+      state.hasMarkedInTurn = state.markedThisTurn.length > 0;
+      updateRowLockout(row);
+      calculateScores();
+      updateCellHighlights();
+      saveSessionState();
+    }
+    return;
+  }
+
+  if (!cell.classList.contains('selectable')) return;
+  const isWhite = cell.classList.contains('selectable-white');
+  const isColor = cell.classList.contains('selectable-color');
+
+  let assignedAction = null;
+  if (isWhite && !state.hasMarkedWhiteThisTurn) { assignedAction = 'white'; state.hasMarkedWhiteThisTurn = true; }
+  else if (isColor && !state.hasMarkedColorThisTurn) { assignedAction = 'color'; state.hasMarkedColorThisTurn = true; }
+
+  if (!assignedAction) return;
+
+  cell.classList.add('marked', 'turn-marked');
+  state.markedThisTurn.push({ color, val, actionType: assignedAction });
+
+  const cells = Array.from(row.querySelectorAll('.cell:not(.lock)'));
+  if (cells.indexOf(cell) === 10) {
+    const lockCell = row.querySelector('.cell.lock');
+    if (lockCell && !lockCell.classList.contains('marked')) {
+      lockCell.classList.add('marked', 'turn-marked');
+      state.markedThisTurn.push({ color, val: 'lock', actionType: 'lock' });
+      state.pendingClosedRowsThisTurn.add(color);
+    }
+  }
+
+  state.hasMarkedInTurn = true;
+  updateRowLockout(row);
+  calculateScores();
+  updateCellHighlights();
+  saveSessionState();
+}
+
+function validateTurnAction() {
+  if (!state.gameStarted || state.gameOverTriggered || state.hasValidatedTurn) return;
+  const isMyTurn = (state.myPlayerId === state.activePlayerId);
+
+  if (isMyTurn && !state.hasRolledInTurn) return alert('Debes lanzar dados.');
+  if (isMyTurn && state.hasRolledInTurn && !state.hasMarkedInTurn) {
+    if (!confirm('¿Pasar turno sin marcar? Se anotará una falta (-5).')) return;
+    const emptyPen = Array.from(document.querySelectorAll('.penalty-box')).find(p => !p.classList.contains('marked'));
+    if (emptyPen) { emptyPen.classList.add('marked'); calculateScores(); }
+  }
+
+  state.hasValidatedTurn = true;
+  document.getElementById('btn-validate-turn').disabled = true;
+  document.getElementById('btn-validate-turn').innerText = 'Acción Validada ✔️';
+
+  updateCellHighlights();
+  const pendingArray = Array.from(state.pendingClosedRowsThisTurn);
+
+  if (state.isHost) {
+    processPlayerValidation(state.myPlayerId, state.myPlayerName, pendingArray);
+  } else {
+    broadcast({ type: 'PLAYER_VALIDATED', playerId: state.myPlayerId, playerName: state.myPlayerName, pendingClosedRows: pendingArray });
+  }
+}

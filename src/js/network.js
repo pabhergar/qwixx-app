@@ -1,7 +1,7 @@
 import { state, resetTurnFlags, saveSessionState, colorNamesSpanish } from './state.js';
 import { applyDiceResults, updateTurnUI, updateCellHighlights, renderPlayerLists, lockRowGlobally, updateLeaderboardTable } from './ui.js';
 import { calculateScores, getClosedRows } from './game.js';
-import { showAlert, showConfirm } from './ui.js';
+import { showAlert, showConfirm, updateDiceUI } from './ui.js';
 
 export function broadcast(data) {
   if (state.isHost) state.connections.forEach(c => c.send(data));
@@ -22,7 +22,7 @@ export function handleNetworkData(data) {
     state.currentDiceResults = data.dice;
     resetTurnFlags();
     state.hasRolledInTurn = true;
-    applyDiceResults(data.dice);
+    updateDiceUI();
     updateCellHighlights();
   } else if (data.type === 'ROW_CLOSURE_ALERT') {
     handleRowClosureAlert(data);

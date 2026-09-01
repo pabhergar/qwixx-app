@@ -1,17 +1,97 @@
 import { state, diceFaces, colorNamesSpanish } from './state.js';
-import { isCellClickableInRow, calculateScores, updateRowLockout } from './game.js';
+import { isCellClickableInRow, updateRowLockout, getClosedRows } from './game.js';
 
-export function applyDiceResults(res) {
-  ['w1', 'w2', 'r', 'y', 'g', 'b'].forEach(id => {
-    const die = document.getElementById(`die-${id}`);
-    if (die) die.innerText = diceFaces[res[id]];
+// --- MODALES PERSONALIZADOS ---
+
+export function showAlert(message, title = 'Atención') {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('custom-alert-modal');
+    const titleEl = document.getElementById('alert-title');
+    const msgEl = document.getElementById('alert-message');
+    const btnClose = document.getElementById('btn-close-alert');
+
+    if (!modal) return resolve();
+
+    titleEl.innerText = title;
+    msgEl.innerText = message;
+    modal.style.display = 'flex';
+
+    const handleClose = () => {
+      modal.style.display = 'none';
+      btnClose.removeEventListener('click', handleClose);
+      resolve();
+    };
+
+    btnClose.addEventListener('click', handleClose);
   });
 }
+
+export function showConfirm(message, title = 'Confirmación') {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('custom-confirm-modal');
+    const titleEl = document.getElementById('confirm-title');
+    const msgEl = document.getElementById('confirm-message');
+    const btnOk = document.getElementById('btn-confirm-ok');
+    const btnCancel = document.getElementById('btn-confirm-cancel');
+
+    if (!modal) return resolve(false);
+
+    titleEl.innerText = title;
+    msgEl.innerText = message;
+    modal.style.display = 'flex';
+
+    const cleanup = (result) => {
+      modal.style.display = 'none';
+      btnOk.removeEventListener('click', onOk);
+      btnCancel.removeEventListener('click', onCancel);
+      resolve(result);
+    };
+
+    const onOk = () => cleanup(true);
+    const onCancel = () => cleanup(false);
+
+    btnOk.addEventListener('click', onOk);
+    btnCancel.addEventListener('click', onCancel);
+  });
+}
+
+// --- DADOS Y TABLERO ---
+
+export function updateDiceUI() {
+  const closedColors = getClosedRows();
+  const dieMap = { w1: null, w2: null, r: 'red', y: 'yellow', g: 'green', b: 'blue' };
+
+  Object.entries(dieMap).forEach(([id, color]) => {
+    const die = document.getElementById(`die-${id}`);
+    if (!die) return;
+
+    // Ocultar dado si la fila de color asociada se ha cerrado
+    if (color && closedColors.includes(color)) {
+      die.style.display = 'none';
+      return;
+    }
+
+    die.style.display = 'flex';
+
+    // Ocultar visibilidad de los dados si no se ha lanzado en el turno
+    if (!state.hasRolledInTurn) {
+      die.style.visibility = 'hidden';
+    } else {
+      die.style.visibility = 'visible';
+      die.innerText = diceFaces[state.currentDiceResults[id]] || '⚀';
+    }
+  });
+}
+
+export const applyDiceResults = updateDiceUI;
 
 export function renderPlayerLists() {
   const ul = document.getElementById('player-list');
   const turnDiv = document.getElementById('turn-list');
-  ul.innerHTML = ''; turnDiv.innerHTML = '';
+  if (!ul || !turnDiv) return;
+
+  ul.innerHTML = '';
+  turnDiv.innerHTML = '';
 
   state.playersList.forEach((p, index) => {
     const isValidated = state.validatedPlayers.has(p.id);
@@ -26,7 +106,9 @@ export function renderPlayerLists() {
     turnDiv.appendChild(pill);
 
     if (index < state.playersList.length - 1) {
-      const arrow = document.createElement('span'); arrow.className = 'turn-arrow'; arrow.innerHTML = '➔';
+      const arrow = document.createElement('span');
+      arrow.className = 'turn-arrow';
+      arrow.innerHTML = '➔';
       turnDiv.appendChild(arrow);
     }
   });
@@ -34,14 +116,22 @@ export function renderPlayerLists() {
 
 export function updateTurnUI() {
   renderPlayerLists();
+  updateDiceUI();
+
   const activePlayerObj = state.playersList.find(p => p.id === state.activePlayerId) || { name: state.activePlayerId };
   const isMyTurn = (state.myPlayerId === state.activePlayerId);
 
-  document.getElementById('status-text').innerHTML = isMyTurn ?
-    `<span style="color:#10b981;">¡Es tu turno, ${state.myPlayerName}! 🎲</span>` :
-    `Turno actual: <b>${activePlayerObj.name}</b> ⏳`;
+  const statusText = document.getElementById('status-text');
+  if (statusText) {
+    statusText.innerHTML = isMyTurn ?
+      `<span style="color:#10b981;">¡Es tu turno, ${state.myPlayerName}! 🎲</span>` :
+      `Turno actual: <b>${activePlayerObj.name}</b> ⏳`;
+  }
 
-  document.getElementById('btn-roll-dice').disabled = !isMyTurn || state.hasRolledInTurn;
+  const btnRoll = document.getElementById('btn-roll-dice');
+  if (btnRoll) {
+    btnRoll.disabled = !isMyTurn || state.hasRolledInTurn;
+  }
 }
 
 export function updateCellHighlights() {
@@ -64,7 +154,7 @@ export function updateCellHighlights() {
 
   colors.forEach(color => {
     const row = document.getElementById(`row-${color}`);
-    if (row.classList.contains('fully-closed')) return;
+    if (!row || row.classList.contains('fully-closed')) return;
 
     const cells = Array.from(row.querySelectorAll('.cell:not(.lock)'));
 
@@ -77,7 +167,8 @@ export function updateCellHighlights() {
     }
 
     if (isMyTurn && !state.hasMarkedColorThisTurn) {
-      const dieColorVal = state.currentDiceResults[color === 'red' ? 'r' : color === 'yellow' ? 'y' : color === 'green' ? 'g' : 'b'];
+      const dieColorKey = color === 'red' ? 'r' : color === 'yellow' ? 'y' : color === 'green' ? 'g' : 'b';
+      const dieColorVal = state.currentDiceResults[dieColorKey];
       if (dieColorVal) {
         const combo1 = state.currentDiceResults.w1 + dieColorVal;
         const combo2 = state.currentDiceResults.w2 + dieColorVal;
@@ -111,12 +202,15 @@ export function updateCellHighlights() {
 
 export function lockRowGlobally(color) {
   const row = document.getElementById(`row-${color}`);
-  const die = document.getElementById(`die-${color === 'red' ? 'r' : color === 'yellow' ? 'y' : color === 'green' ? 'g' : 'b'}`);
+  if (!row) return;
+
+  const dieKey = color === 'red' ? 'r' : color === 'yellow' ? 'y' : color === 'green' ? 'g' : 'b';
+  const die = document.getElementById(`die-${dieKey}`);
   if (die) die.style.display = 'none';
 
   row.classList.add('fully-closed');
 
-  // Si tu casilla del candado está marcada, fuiste tú quien cerró la fila
+  // Identificar si fuiste tú quien cerró la fila inspeccionando si marcaste el candado
   const lockCell = row.querySelector('.cell.lock');
   const isMe = lockCell && lockCell.classList.contains('marked');
 
@@ -128,60 +222,14 @@ export function lockRowGlobally(color) {
 
 export function updateLeaderboardTable() {
   const tbody = document.getElementById('leaderboard-body');
+  if (!tbody) return;
   tbody.innerHTML = '';
+
   const scoresArray = Object.values(state.playerScoresMap).sort((a, b) => b.score - a.score);
 
   scoresArray.forEach((item, index) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>#${index + 1}</td><td>${item.name}</td><td><b>${item.score} pts</b></td>`;
     tbody.appendChild(tr);
-  });
-}
-
-export function showAlert(message, title = 'Atención') {
-  return new Promise((resolve) => {
-    const modal = document.getElementById('custom-alert-modal');
-    const titleEl = document.getElementById('alert-title');
-    const msgEl = document.getElementById('alert-message');
-    const btnClose = document.getElementById('btn-close-alert');
-
-    titleEl.innerText = title;
-    msgEl.innerText = message;
-    modal.style.display = 'flex';
-
-    const handleClose = () => {
-      modal.style.display = 'none';
-      btnClose.removeEventListener('click', handleClose);
-      resolve();
-    };
-
-    btnClose.addEventListener('click', handleClose);
-  });
-}
-
-export function showConfirm(message, title = 'Confirmación') {
-  return new Promise((resolve) => {
-    const modal = document.getElementById('custom-confirm-modal');
-    const titleEl = document.getElementById('confirm-title');
-    const msgEl = document.getElementById('confirm-message');
-    const btnOk = document.getElementById('btn-confirm-ok');
-    const btnCancel = document.getElementById('btn-confirm-cancel');
-
-    titleEl.innerText = title;
-    msgEl.innerText = message;
-    modal.style.display = 'flex';
-
-    const cleanup = (result) => {
-      modal.style.display = 'none';
-      btnOk.removeEventListener('click', onOk);
-      btnCancel.removeEventListener('click', onCancel);
-      resolve(result);
-    };
-
-    const onOk = () => cleanup(true);
-    const onCancel = () => cleanup(false);
-
-    btnOk.addEventListener('click', onOk);
-    btnCancel.addEventListener('click', onCancel);
   });
 }

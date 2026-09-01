@@ -1,8 +1,7 @@
 import { state, resetTurnFlags, saveSessionState, colorNamesSpanish } from './js/state.js';
 import { calculateScores, updateRowLockout } from './js/game.js';
-import { applyDiceResults, updateCellHighlights, renderPlayerLists, updateTurnUI, lockRowGlobally } from './js/ui.js';
+import { applyDiceResults, updateCellHighlights, renderPlayerLists, showAlert, showConfirm, updateDiceUI } from './js/ui.js';
 import { broadcast, handleHostConnection, handleNetworkData, processPlayerValidation, startGameUI, exitGame } from './js/network.js';
-import { showAlert, showConfirm } from './js/ui.js';
 
 window.addEventListener('DOMContentLoaded', () => {
   const savedName = localStorage.getItem('qwixx_player_name');
@@ -99,7 +98,8 @@ function handleRollClick() {
   state.hasRolledInTurn = true;
   document.getElementById('btn-roll-dice').disabled = true;
   state.currentDiceResults = res;
-  applyDiceResults(res);
+
+  updateDiceUI(); // Muestra los dados con sus nuevos valores
   updateCellHighlights();
   saveSessionState();
   broadcast({ type: 'DICE_ROLLED', dice: res });
@@ -163,11 +163,20 @@ function handleCellClick(cell) {
 
 async function validateTurnAction() {
   if (!state.gameStarted || state.gameOverTriggered || state.hasValidatedTurn) return;
+
   const isMyTurn = (state.myPlayerId === state.activePlayerId);
 
-  if (isMyTurn && !state.hasRolledInTurn) return showAlert('Debes lanzar dados.');
+  // 1. Ningún jugador puede validar si los dados no se han lanzado aún
+  if (!state.hasRolledInTurn) {
+    if (isMyTurn) {
+      return showAlert('Debes lanzar los dados antes de validar tu turno.');
+    } else {
+      return showAlert('Debes esperar a que el jugador activo lance los dados.');
+    }
+  }
 
-  if (isMyTurn && state.hasRolledInTurn && !state.hasMarkedInTurn) {
+  // 2. Si es tu turno y no has marcado nada, se pregunta por la falta
+  if (isMyTurn && !state.hasMarkedInTurn) {
     const confirmPenalty = await showConfirm(
       'No has marcado ninguna casilla en tu turno. ¿Deseas pasar y anotarte una falta (-5 pts)?',
       'Anotar Falta'
@@ -175,9 +184,13 @@ async function validateTurnAction() {
     if (!confirmPenalty) return;
 
     const emptyPen = Array.from(document.querySelectorAll('.penalty-box')).find(p => !p.classList.contains('marked'));
-    if (emptyPen) { emptyPen.classList.add('marked'); calculateScores(); }
+    if (emptyPen) {
+      emptyPen.classList.add('marked');
+      calculateScores();
+    }
   }
 
+  // 3. Confirmar la validación
   state.hasValidatedTurn = true;
   document.getElementById('btn-validate-turn').disabled = true;
   document.getElementById('btn-validate-turn').innerText = 'Acción Validada ✔️';
@@ -188,6 +201,11 @@ async function validateTurnAction() {
   if (state.isHost) {
     processPlayerValidation(state.myPlayerId, state.myPlayerName, pendingArray);
   } else {
-    broadcast({ type: 'PLAYER_VALIDATED', playerId: state.myPlayerId, playerName: state.myPlayerName, pendingClosedRows: pendingArray });
+    broadcast({
+      type: 'PLAYER_VALIDATED',
+      playerId: state.myPlayerId,
+      playerName: state.myPlayerName,
+      pendingClosedRows: pendingArray
+    });
   }
 }

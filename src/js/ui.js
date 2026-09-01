@@ -109,13 +109,20 @@ export function updateCellHighlights() {
   });
 }
 
-export function lockRowGlobally(color, isMe = false) {
+export function lockRowGlobally(color) {
   const row = document.getElementById(`row-${color}`);
   const die = document.getElementById(`die-${color === 'red' ? 'r' : color === 'yellow' ? 'y' : color === 'green' ? 'g' : 'b'}`);
   if (die) die.style.display = 'none';
 
   row.classList.add('fully-closed');
+
+  // Si tu casilla del candado está marcada, fuiste tú quien cerró la fila
+  const lockCell = row.querySelector('.cell.lock');
+  const isMe = lockCell && lockCell.classList.contains('marked');
+
+  row.classList.remove('closed-by-me', 'closed-by-other');
   row.classList.add(isMe ? 'closed-by-me' : 'closed-by-other');
+
   updateRowLockout(row);
 }
 

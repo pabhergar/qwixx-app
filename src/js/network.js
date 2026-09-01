@@ -143,24 +143,34 @@ export function processPlayerValidation(playerId, playerName, pendingClosedRows 
 export function handleRowClosureAlert(data) {
   data.declaredClosures.forEach(color => {
     state.declaredClosuresThisTurn.add(color);
-    if (state.pendingClosedRowsThisTurn.has(color)) state.myLockedClosuresThisTurn.add(color);
+    if (state.pendingClosedRowsThisTurn.has(color)) {
+      state.myLockedClosuresThisTurn.add(color);
+    }
   });
 
+  // Se limpian validaciones pero se mantiene validado al jugador que provocó el cierre
   state.validatedPlayers.clear();
-  state.hasValidatedTurn = false;
-  const btn = document.getElementById('btn-validate-turn');
-  if (btn) { btn.disabled = false; btn.innerText = 'Validar Acción ✔️'; }
+  state.validatedPlayers.add(data.closingPlayerId);
 
-  renderPlayerLists();
-  updateCellHighlights();
+  const isClosingPlayer = (data.closingPlayerId === state.myPlayerId);
 
-  // Solo se muestra el aviso a los demás jugadores
-  if (data.closingPlayerId !== state.myPlayerId) {
+  // Solo se rescinde la validación y se muestra la alerta a los demás jugadores
+  if (!isClosingPlayer) {
+    state.hasValidatedTurn = false;
+    const btn = document.getElementById('btn-validate-turn');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = 'Validar Acción ✔️';
+    }
+
     showAlert(
       `¡Atención! ${data.closingPlayerName} va a cerrar el color ${colorNamesSpanish[data.color] || data.color}.\n\nSe han cancelado las validaciones del turno para que podáis reevaluar vuestra jugada.`,
       '🔒 Fila Cerrada'
     );
   }
+
+  renderPlayerLists();
+  updateCellHighlights();
 }
 
 export function checkGameOver() {

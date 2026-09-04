@@ -1,7 +1,6 @@
 import { state, resetTurnFlags, saveSessionState, colorNamesSpanish } from './state.js';
-import { applyDiceResults, updateTurnUI, updateCellHighlights, renderPlayerLists, lockRowGlobally, updateLeaderboardTable } from './ui.js';
+import { updateDiceUI, updateTurnUI, updateCellHighlights, renderPlayerLists, lockRowGlobally, updateLeaderboardTable, showAlert, showGameOverModal, showConfirm } from './ui.js';
 import { calculateScores, getClosedRows } from './game.js';
-import { showAlert, showConfirm, updateDiceUI } from './ui.js';
 
 export function broadcast(data) {
   if (state.isHost) state.connections.forEach(c => c.send(data));
@@ -10,19 +9,27 @@ export function broadcast(data) {
 
 export function handleNetworkData(data) {
   if (data.type === 'REJECTED') {
-    showAlert(data.reason); exitGame();
+    showAlert(data.reason, 'Conexión rechazada').then(() => exitGame(true));
   } else if (data.type === 'WELCOME') {
-    state.myPlayerId = data.playerId; state.playersList = data.players; state.activePlayerId = data.activePlayerId;
-    renderPlayerLists(); saveSessionState();
+    state.myPlayerId = data.playerId;
+    state.playersList = data.players;
+    state.activePlayerId = data.activePlayerId;
+    renderPlayerLists();
+    saveSessionState();
   } else if (data.type === 'PLAYER_JOINED') {
-    state.playersList = data.players; renderPlayerLists(); saveSessionState();
+    state.playersList = data.players;
+    renderPlayerLists();
+    saveSessionState();
   } else if (data.type === 'GAME_STARTED') {
-    state.playersList = data.players; state.activePlayerId = data.activePlayerId; startGameUI();
+    state.playersList = data.players;
+    state.activePlayerId = data.activePlayerId;
+    startGameUI();
   } else if (data.type === 'DICE_ROLLED') {
     state.currentDiceResults = data.dice;
     resetTurnFlags();
     state.hasRolledInTurn = true;
     updateDiceUI();
+    updateTurnUI();
     updateCellHighlights();
   } else if (data.type === 'ROW_CLOSURE_ALERT') {
     handleRowClosureAlert(data);
@@ -31,7 +38,7 @@ export function handleNetworkData(data) {
     renderPlayerLists();
   } else if (data.type === 'TURN_CHANGED') {
     state.activePlayerId = data.nextPlayer;
-    if (data.closedRows) data.closedRows.forEach(color => lockRowGlobally(color, false));
+    if (data.closedRows) data.closedRows.forEach(color => lockRowGlobally(color));
     resetTurnFlags();
     state.validatedPlayers.clear();
     state.declaredClosuresThisTurn.clear();
@@ -40,14 +47,14 @@ export function handleNetworkData(data) {
     updateCellHighlights();
     checkGameOver();
   } else if (data.type === 'SYNC_STATE') {
-    state.playersList = data.players; state.activePlayerId = data.activePlayerId; state.gameStarted = data.gameStarted;
-    state.currentDiceResults = data.dice; state.hasRolledInTurn = data.hasRolled || false;
+    state.playersList = data.players;
+    state.activePlayerId = data.activePlayerId;
+    state.gameStarted = data.gameStarted;
+    state.currentDiceResults = data.dice;
+    state.hasRolledInTurn = data.hasRolled || false;
     state.validatedPlayers = new Set(data.validatedList || []);
-    applyDiceResults(state.currentDiceResults);
-    data.closedRows.forEach(color => {
-      const lockCell = document.querySelector(`#row-${color} .cell.lock`);
-      lockRowGlobally(color, lockCell && lockCell.classList.contains('marked'));
-    });
+    updateDiceUI();
+    data.closedRows.forEach(color => lockRowGlobally(color));
     if (state.gameStarted) startGameUI();
     updateTurnUI();
     updateCellHighlights();
@@ -72,18 +79,21 @@ export function handleHostConnection(conn) {
     if (data.type === 'HANDSHAKE') {
       if (state.gameStarted) {
         conn.send({ type: 'REJECTED', reason: 'La partida ya ha comenzado.' });
-        setTimeout(() => conn.close(), 500); return;
+        setTimeout(() => conn.close(), 500);
+        return;
       }
       const nameTrimmed = data.name.trim();
       if (state.playersList.find(p => p.name.toLowerCase() === nameTrimmed.toLowerCase())) {
         conn.send({ type: 'REJECTED', reason: 'Nombre en uso.' });
-        setTimeout(() => conn.close(), 500); return;
+        setTimeout(() => conn.close(), 500);
+        return;
       }
       const newPlayerId = 'P' + (state.playersList.length + 1);
       state.playersList.push({ id: newPlayerId, name: nameTrimmed });
       conn.send({ type: 'WELCOME', playerId: newPlayerId, players: state.playersList, activePlayerId: state.activePlayerId, gameStarted: state.gameStarted });
       broadcast({ type: 'PLAYER_JOINED', players: state.playersList });
-      renderPlayerLists(); saveSessionState();
+      renderPlayerLists();
+      saveSessionState();
     } else if (data.type === 'PLAYER_VALIDATED') {
       processPlayerValidation(data.playerId, data.playerName, data.pendingClosedRows);
     } else {
@@ -122,7 +132,7 @@ export function processPlayerValidation(playerId, playerName, pendingClosedRows 
 
     if (state.validatedPlayers.size >= state.playersList.length) {
       const finalClosures = Array.from(state.declaredClosuresThisTurn);
-      finalClosures.forEach(color => lockRowGlobally(color, false));
+      finalClosures.forEach(color => lockRowGlobally(color));
 
       const playerIds = state.playersList.map(p => p.id);
       const nextPlayer = playerIds[(playerIds.indexOf(state.activePlayerId) + 1) % playerIds.length];
@@ -143,26 +153,14 @@ export function processPlayerValidation(playerId, playerName, pendingClosedRows 
 export function handleRowClosureAlert(data) {
   data.declaredClosures.forEach(color => {
     state.declaredClosuresThisTurn.add(color);
-    if (state.pendingClosedRowsThisTurn.has(color)) {
-      state.myLockedClosuresThisTurn.add(color);
-    }
+    if (state.pendingClosedRowsThisTurn.has(color)) state.myLockedClosuresThisTurn.add(color);
   });
 
-  // Se limpian validaciones pero se mantiene validado al jugador que provocó el cierre
   state.validatedPlayers.clear();
   state.validatedPlayers.add(data.closingPlayerId);
 
-  const isClosingPlayer = (data.closingPlayerId === state.myPlayerId);
-
-  // Solo se rescinde la validación y se muestra la alerta a los demás jugadores
-  if (!isClosingPlayer) {
+  if (data.closingPlayerId !== state.myPlayerId) {
     state.hasValidatedTurn = false;
-    const btn = document.getElementById('btn-validate-turn');
-    if (btn) {
-      btn.disabled = false;
-      btn.innerText = 'Validar Acción ✔️';
-    }
-
     showAlert(
       `¡Atención! ${data.closingPlayerName} va a cerrar el color ${colorNamesSpanish[data.color] || data.color}.\n\nSe han cancelado las validaciones del turno para que podáis reevaluar vuestra jugada.`,
       '🔒 Fila Cerrada'
@@ -170,6 +168,7 @@ export function handleRowClosureAlert(data) {
   }
 
   renderPlayerLists();
+  updateTurnUI();
   updateCellHighlights();
 }
 
@@ -195,19 +194,15 @@ export function checkGameOver() {
 
 export function startGameUI() {
   state.gameStarted = true;
-  document.getElementById('net-setup').style.display = 'none';
-  document.getElementById('lobby-section').style.display = 'none';
-  document.getElementById('turn-tracker').style.display = 'block';
-  document.getElementById('game-area').style.display = 'block';
-  document.getElementById('status-text').style.display = 'block';
+  document.body.classList.add('in-game');
+  const netBar = document.querySelector('.network-bar');
+  const gameArea = document.getElementById('game-area');
+
+  if (netBar) netBar.style.display = 'none';
+  if (gameArea) gameArea.style.display = 'block';
+
   updateTurnUI();
   updateCellHighlights();
-}
-
-export function showGameOverModal(reason) {
-  document.getElementById('game-over-reason').innerText = reason;
-  updateLeaderboardTable();
-  document.getElementById('game-over-modal').style.display = 'flex';
 }
 
 export async function exitGame(force = false) {
@@ -215,6 +210,7 @@ export async function exitGame(force = false) {
     const confirmed = await showConfirm('¿Seguro que quieres abandonar la partida y borrar los datos guardados?', 'Salir del Juego');
     if (!confirmed) return;
   }
+  document.body.classList.remove('in-game');
   localStorage.clear();
   window.location.reload();
 }

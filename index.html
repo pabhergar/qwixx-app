@@ -7,46 +7,53 @@
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="./src/css/style.css">
 </head>
-<!-- Modal Alert -->
-<div class="modal-overlay" id="custom-alert-modal">
-    <div class="modal-content" style="max-width: 380px;">
-        <h3 id="alert-title" style="margin-top: 0; color: #0f172a; font-size: 18px;">Atención</h3>
-        <p id="alert-message" style="font-size: 14px; color: #475569; margin: 15px 0; line-height: 1.4; white-space: pre-line;"></p>
-        <div class="modal-actions">
-            <button class="modal-btn modal-btn-primary" id="btn-close-alert">Entendido</button>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Confirm -->
-<div class="modal-overlay" id="custom-confirm-modal">
-    <div class="modal-content" style="max-width: 380px;">
-        <h3 id="confirm-title" style="margin-top: 0; color: #0f172a; font-size: 18px;">Confirmar acción</h3>
-        <p id="confirm-message" style="font-size: 14px; color: #475569; margin: 15px 0; line-height: 1.4; white-space: pre-line;"></p>
-        <div class="modal-actions">
-            <button class="modal-btn modal-btn-secondary" id="btn-confirm-cancel">Cancelar</button>
-            <button class="modal-btn modal-btn-success" id="btn-confirm-ok">Aceptar</button>
-        </div>
-    </div>
-</div>
 <body>
 <div class="board-container">
-    <h1>Qwixx Online</h1>
+    <h1 class="game-title">Qwixx Online</h1>
 
+    <!-- MODAL FIN DE PARTIDA -->
     <div class="modal-overlay" id="game-over-modal">
-        <div class="modal-content">
-            <h2>🏆 Fin de la Partida</h2>
-            <div id="game-over-reason" style="font-size: 13px; color: #64748b; margin-bottom: 10px;"></div>
-            <table class="leaderboard-table">
-                <thead>
-                    <tr><th>Pos</th><th>Jugador</th><th>Puntos</th></tr>
-                </thead>
-                <tbody id="leaderboard-body"></tbody>
-            </table>
-            <button class="net-btn" id="btn-modal-exit" style="width: 100%; margin-top: 10px;">Volver al Inicio</button>
+      <div class="modal-content">
+        <h2>🏆 Fin de la Partida</h2>
+        <div id="game-over-reason" style="font-size: 13px; color: #64748b; margin-bottom: 10px;"></div>
+        
+        <div class="table-wrapper">
+          <table class="leaderboard-table">
+            <thead>
+              <tr><th>Pos</th><th>Jugador</th><th>Puntos</th></tr>
+            </thead>
+            <tbody id="leaderboard-body"></tbody>
+          </table>
+        </div>
+
+        <button class="modal-btn modal-btn-primary" id="btn-modal-exit">Volver al Inicio</button>
+      </div>
+    </div>
+
+    <!-- MODAL ALERT -->
+    <div class="modal-overlay" id="custom-alert-modal">
+        <div class="modal-content" style="max-width: 380px;">
+            <h3 id="alert-title" style="margin-top: 0; color: #0f172a; font-size: 18px;">Atención</h3>
+            <p id="alert-message" style="font-size: 14px; color: #475569; margin: 15px 0; line-height: 1.4; white-space: pre-line;"></p>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-primary" id="btn-close-alert">Entendido</button>
+            </div>
         </div>
     </div>
 
+    <!-- MODAL CONFIRM -->
+    <div class="modal-overlay" id="custom-confirm-modal">
+        <div class="modal-content" style="max-width: 380px;">
+            <h3 id="confirm-title" style="margin-top: 0; color: #0f172a; font-size: 18px;">Confirmar acción</h3>
+            <p id="confirm-message" style="font-size: 14px; color: #475569; margin: 15px 0; line-height: 1.4; white-space: pre-line;"></p>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-secondary" id="btn-confirm-cancel">Cancelar</button>
+                <button class="modal-btn modal-btn-success" id="btn-confirm-ok">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOBBY & NETWORK -->
     <div class="network-bar">
         <div class="network-controls" id="net-setup">
             <input type="text" id="player-name-input" class="net-input name" placeholder="Tu Nombre" maxlength="12">
@@ -69,66 +76,78 @@
                 ⏳ Esperando a que el anfitrión inicie la partida...
             </div>
         </div>
-
-        <div class="status-badge" id="status-text" style="display: none;"></div>
     </div>
 
-    <div class="turn-tracker" id="turn-tracker">
-        <div class="turn-tracker-title">Orden de Turno</div>
-        <div class="turn-list" id="turn-list"></div>
-    </div>
-
+    <!-- ÁREA PRINCIPAL DE JUEGO -->
     <div id="game-area">
-        <div class="dice-section">
-            <div class="dice-container">
-                <div class="die white1" id="die-w1">⚀</div>
-                <div class="die white2" id="die-w2">⚀</div>
-                <div class="die red" id="die-r">⚀</div>
-                <div class="die yellow" id="die-y">⚀</div>
-                <div class="die green" id="die-g">⚀</div>
-                <div class="die blue" id="die-b">⚀</div>
+        <div class="game-layout">
+            
+            <!-- COLUMNA DE ACCIÓN -->
+            <div class="left-col">
+                <div class="action-panel" id="action-panel">
+                    <div class="dice-section">
+                        <div class="dice-status-msg" id="dice-status-msg"></div>
+                        <div class="dice-container" id="dice-container">
+                            <div class="die white1" id="die-w1">⚀</div>
+                            <div class="die white2" id="die-w2">⚀</div>
+                            <div class="die red" id="die-r">⚀</div>
+                            <div class="die yellow" id="die-y">⚀</div>
+                            <div class="die green" id="die-g">⚀</div>
+                            <div class="die blue" id="die-b">⚀</div>
+                        </div>
+                    </div>
+                    <div class="action-btn-group">
+                        <button class="btn-roll" id="btn-roll-dice">Lanzar</button>
+                        <button class="btn-validate" id="btn-validate-turn">Validar</button>
+                        <button class="btn-players-icon" id="btn-show-players" title="Ver Jugadores">👥</button>
+                    </div>
+                </div>
+
+                <!-- PANEL DE JUGADORES EN SALA -->
+                <div class="wait-panel" id="wait-panel">
+                    <div class="wait-title">Jugadores en sala</div>
+                    <ul class="player-list" id="turn-wait-list"></ul>
+                    <button class="btn-secondary-action" id="btn-return-actions">Volver</button>
+                </div>
             </div>
-            <button class="btn-roll" id="btn-roll-dice">Lanzar Dados 🎲</button>
-        </div>
 
-        <div class="row red" id="row-red">
-            <div class="cell" data-val="2">2</div><div class="cell" data-val="3">3</div><div class="cell" data-val="4">4</div><div class="cell" data-val="5">5</div><div class="cell" data-val="6">6</div><div class="cell" data-val="7">7</div><div class="cell" data-val="8">8</div><div class="cell" data-val="9">9</div><div class="cell" data-val="10">10</div><div class="cell" data-val="11">11</div><div class="cell" data-val="12">12</div><div class="cell lock" data-val="lock">🔒</div>
-        </div>
+            <!-- TABLERO Y PUNTUACIÓN -->
+            <div class="right-col">
+                <div class="board-rows">
+                    <div class="row red" id="row-red">
+                        <div class="cell" data-val="2">2</div><div class="cell" data-val="3">3</div><div class="cell" data-val="4">4</div><div class="cell" data-val="5">5</div><div class="cell" data-val="6">6</div><div class="cell" data-val="7">7</div><div class="cell" data-val="8">8</div><div class="cell" data-val="9">9</div><div class="cell" data-val="10">10</div><div class="cell" data-val="11">11</div><div class="cell" data-val="12">12</div><div class="cell lock" data-val="lock">🔒</div>
+                    </div>
 
-        <div class="row yellow" id="row-yellow">
-            <div class="cell" data-val="2">2</div><div class="cell" data-val="3">3</div><div class="cell" data-val="4">4</div><div class="cell" data-val="5">5</div><div class="cell" data-val="6">6</div><div class="cell" data-val="7">7</div><div class="cell" data-val="8">8</div><div class="cell" data-val="9">9</div><div class="cell" data-val="10">10</div><div class="cell" data-val="11">11</div><div class="cell" data-val="12">12</div><div class="cell lock" data-val="lock">🔒</div>
-        </div>
+                    <div class="row yellow" id="row-yellow">
+                        <div class="cell" data-val="2">2</div><div class="cell" data-val="3">3</div><div class="cell" data-val="4">4</div><div class="cell" data-val="5">5</div><div class="cell" data-val="6">6</div><div class="cell" data-val="7">7</div><div class="cell" data-val="8">8</div><div class="cell" data-val="9">9</div><div class="cell" data-val="10">10</div><div class="cell" data-val="11">11</div><div class="cell" data-val="12">12</div><div class="cell lock" data-val="lock">🔒</div>
+                    </div>
 
-        <div class="row green" id="row-green">
-            <div class="cell" data-val="12">12</div><div class="cell" data-val="11">11</div><div class="cell" data-val="10">10</div><div class="cell" data-val="9">9</div><div class="cell" data-val="8">8</div><div class="cell" data-val="7">7</div><div class="cell" data-val="6">6</div><div class="cell" data-val="5">5</div><div class="cell" data-val="4">4</div><div class="cell" data-val="3">3</div><div class="cell" data-val="2">2</div><div class="cell lock" data-val="lock">🔒</div>
-        </div>
+                    <div class="row green" id="row-green">
+                        <div class="cell" data-val="12">12</div><div class="cell" data-val="11">11</div><div class="cell" data-val="10">10</div><div class="cell" data-val="9">9</div><div class="cell" data-val="8">8</div><div class="cell" data-val="7">7</div><div class="cell" data-val="6">6</div><div class="cell" data-val="5">5</div><div class="cell" data-val="4">4</div><div class="cell" data-val="3">3</div><div class="cell" data-val="2">2</div><div class="cell lock" data-val="lock">🔒</div>
+                    </div>
 
-        <div class="row blue" id="row-blue">
-            <div class="cell" data-val="12">12</div><div class="cell" data-val="11">11</div><div class="cell" data-val="10">10</div><div class="cell" data-val="9">9</div><div class="cell" data-val="8">8</div><div class="cell" data-val="7">7</div><div class="cell" data-val="6">6</div><div class="cell" data-val="5">5</div><div class="cell" data-val="4">4</div><div class="cell" data-val="3">3</div><div class="cell" data-val="2">2</div><div class="cell lock" data-val="lock">🔒</div>
-        </div>
+                    <div class="row blue" id="row-blue">
+                        <div class="cell" data-val="12">12</div><div class="cell" data-val="11">11</div><div class="cell" data-val="10">10</div><div class="cell" data-val="9">9</div><div class="cell" data-val="8">8</div><div class="cell" data-val="7">7</div><div class="cell" data-val="6">6</div><div class="cell" data-val="5">5</div><div class="cell" data-val="4">4</div><div class="cell" data-val="3">3</div><div class="cell" data-val="2">2</div><div class="cell lock" data-val="lock">🔒</div>
+                    </div>
+                </div>
 
-        <table class="points-reference">
-            <tr><th>Xs</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td><td>12</td></tr>
-            <tr><th>Pts</th><td>1</td><td>3</td><td>6</td><td>10</td><td>15</td><td>21</td><td>28</td><td>36</td><td>45</td><td>55</td><td>66</td><td>78</td></tr>
-        </table>
-
-        <div class="bottom-section">
-            <div class="penalties-container">
-                <span style="font-size: 13px; font-weight: bold; color: #334155;">Faltas (-5):</span>
-                <div class="penalty-box"></div><div class="penalty-box"></div><div class="penalty-box"></div><div class="penalty-box"></div>
+                <div class="bottom-section">
+                    <div class="penalties-container">
+                        <span class="penalties-label">Faltas (-5):</span>
+                        <div class="penalty-box"></div><div class="penalty-box"></div><div class="penalty-box"></div><div class="penalty-box"></div>
+                    </div>
+                    <div class="score-calculator">
+                        <div class="score-box red-total" id="total-red">0</div><span>+</span>
+                        <div class="score-box yellow-total" id="total-yellow">0</div><span>+</span>
+                        <div class="score-box green-total" id="total-green">0</div><span>+</span>
+                        <div class="score-box blue-total" id="total-blue">0</div><span>-</span>
+                        <div class="score-box penalty-total" id="total-penalty">0</div><span>=</span>
+                        <div class="score-box final-total" id="total-final">0</div>
+                    </div>
+                    <button class="btn-exit" id="btn-exit-game">Salir</button>
+                </div>
             </div>
-            <div class="score-calculator">
-                <div class="score-box red-total" id="total-red">0</div><span>+</span>
-                <div class="score-box yellow-total" id="total-yellow">0</div><span>+</span>
-                <div class="score-box green-total" id="total-green">0</div><span>+</span>
-                <div class="score-box blue-total" id="total-blue">0</div><span>-</span>
-                <div class="score-box penalty-total" id="total-penalty">0</div><span>=</span>
-                <div class="score-box final-total" id="total-final">0</div>
-            </div>
-            <div class="actions-container">
-                <button class="btn btn-validate" id="btn-validate-turn">Validar Acción ✔️</button>
-                <button class="btn btn-exit" id="btn-exit-game">Salir</button>
-            </div>
+
         </div>
     </div>
 </div>

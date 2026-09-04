@@ -35,16 +35,20 @@ export function resetTurnFlags() {
   state.hasMarkedWhiteThisTurn = false;
   state.hasMarkedColorThisTurn = false;
   state.hasValidatedTurn = false;
-  state.isForcedPenalty = false; // Reset de la falta forzada
+  state.isForcedPenalty = false;
   state.markedThisTurn = [];
   state.pendingClosedRowsThisTurn.clear();
   state.myLockedClosuresThisTurn.clear();
 
+  // Limpia el destacado del turno actual para que las casillas pasen a 'X' grisácea
+  document.querySelectorAll('.cell.turn-marked').forEach(c => c.classList.remove('turn-marked'));
+
+  // Resetea el botón de validación y elimina cualquier animación de parpadeo activa
   const btn = document.getElementById('btn-validate-turn');
   if (btn) {
     btn.disabled = false;
-    btn.classList.remove('forced-penalty');
-    btn.innerText = 'Validar Acción ✔️';
+    btn.classList.remove('forced-penalty', 'forced-penalty-red', 'forced-penalty-blue');
+    btn.innerText = 'Validar';
   }
 }
 

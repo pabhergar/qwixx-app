@@ -1,8 +1,6 @@
 import { state, diceFaces, colorNamesSpanish } from './state.js';
 import { isCellClickableInRow, updateRowLockout, getClosedRows } from './game.js';
 
-// --- MODALES PERSONALIZADOS ---
-
 export function showAlert(message, title = 'Atención') {
   return new Promise((resolve) => {
     const modal = document.getElementById('custom-alert-modal');
@@ -55,7 +53,13 @@ export function showConfirm(message, title = 'Confirmación') {
   });
 }
 
-// --- DADOS Y TABLERO ---
+export function showGameOverModal(reason) {
+  const reasonEl = document.getElementById('game-over-reason');
+  const modal = document.getElementById('game-over-modal');
+  if (reasonEl) reasonEl.innerText = reason;
+  updateLeaderboardTable();
+  if (modal) modal.style.display = 'flex';
+}
 
 export function updateDiceUI() {
   const closedColors = getClosedRows();
@@ -65,7 +69,6 @@ export function updateDiceUI() {
     const die = document.getElementById(`die-${id}`);
     if (!die) return;
 
-    // Ocultar dado si la fila de color asociada se ha cerrado
     if (color && closedColors.includes(color)) {
       die.style.display = 'none';
       return;
@@ -73,7 +76,6 @@ export function updateDiceUI() {
 
     die.style.display = 'flex';
 
-    // Ocultar visibilidad de los dados si no se ha lanzado en el turno
     if (!state.hasRolledInTurn) {
       die.style.visibility = 'hidden';
     } else {
@@ -87,31 +89,48 @@ export const applyDiceResults = updateDiceUI;
 
 export function renderPlayerLists() {
   const ul = document.getElementById('player-list');
-  const turnDiv = document.getElementById('turn-list');
-  if (!ul || !turnDiv) return;
+  const waitUl = document.getElementById('turn-wait-list');
+  if (!ul) return;
 
   ul.innerHTML = '';
-  turnDiv.innerHTML = '';
+  if (waitUl) waitUl.innerHTML = '';
 
-  state.playersList.forEach((p, index) => {
+  state.playersList.forEach((p) => {
     const isValidated = state.validatedPlayers.has(p.id);
+    const isCurrentTurn = (p.id === state.activePlayerId);
 
     const li = document.createElement('li');
-    li.innerHTML = `<span>${p.name} ${p.id === 'P1' ? '👑' : ''} ${isValidated ? '✔️' : ''}</span> ${p.id === state.myPlayerId ? '<span style="color:#10b981; font-size:12px;">(Tú)</span>' : ''}`;
+    li.innerHTML = `<span>${isCurrentTurn ? '🎲 ' : ''}${p.name} ${p.id === 'P1' ? '👑' : ''}</span> <span>${isValidated ? '✔️' : '⏳'}</span>`;
     ul.appendChild(li);
 
-    const pill = document.createElement('div');
-    pill.className = `turn-pill ${p.id === state.activePlayerId ? 'active' : ''} ${isValidated ? 'ready' : ''}`;
-    pill.innerHTML = `${p.name} ${isValidated ? '✔️' : ''}`;
-    turnDiv.appendChild(pill);
-
-    if (index < state.playersList.length - 1) {
-      const arrow = document.createElement('span');
-      arrow.className = 'turn-arrow';
-      arrow.innerHTML = '➔';
-      turnDiv.appendChild(arrow);
+    if (waitUl) {
+      const waitLi = li.cloneNode(true);
+      waitUl.appendChild(waitLi);
     }
   });
+}
+
+export function showWaitPanel() {
+  const actionPanel = document.getElementById('action-panel');
+  const waitPanel = document.getElementById('wait-panel');
+  if (actionPanel) actionPanel.style.display = 'none';
+  if (waitPanel) waitPanel.style.display = 'flex';
+}
+
+export function hideWaitPanel() {
+  const actionPanel = document.getElementById('action-panel');
+  const waitPanel = document.getElementById('wait-panel');
+  if (waitPanel) waitPanel.style.display = 'none';
+  if (actionPanel) actionPanel.style.display = 'flex';
+}
+
+export function toggleWaitPanel() {
+  const waitPanel = document.getElementById('wait-panel');
+  if (waitPanel && waitPanel.style.display === 'flex') {
+    hideWaitPanel();
+  } else {
+    showWaitPanel();
+  }
 }
 
 export function updateTurnUI() {
@@ -121,23 +140,69 @@ export function updateTurnUI() {
   const activePlayerObj = state.playersList.find(p => p.id === state.activePlayerId) || { name: state.activePlayerId };
   const isMyTurn = (state.myPlayerId === state.activePlayerId);
 
-  const statusText = document.getElementById('status-text');
-  if (statusText) {
-    statusText.innerHTML = isMyTurn ?
-      `<span style="color:#10b981;">¡Es tu turno, ${state.myPlayerName}! 🎲</span>` :
-      `Turno actual: <b>${activePlayerObj.name}</b> ⏳`;
+  const diceMsg = document.getElementById('dice-status-msg');
+  if (diceMsg) {
+    if (!state.hasRolledInTurn) {
+      diceMsg.style.display = 'block';
+      diceMsg.innerText = isMyTurn ? '¡Tu turno! Lanza 🎲' : `Esperando a ${activePlayerObj.name}... ⏳`;
+    } else {
+      diceMsg.style.display = 'none';
+      diceMsg.innerText = '';
+    }
   }
 
   const btnRoll = document.getElementById('btn-roll-dice');
-  if (btnRoll) {
-    btnRoll.disabled = !isMyTurn || state.hasRolledInTurn;
+  const btnValidate = document.getElementById('btn-validate-turn');
+
+  if (!state.hasRolledInTurn) {
+    if (isMyTurn) {
+      if (btnRoll) {
+        btnRoll.innerText = 'Lanzar';
+        btnRoll.style.display = 'block';
+        btnRoll.disabled = false;
+      }
+      if (btnValidate) {
+        btnValidate.style.display = 'none';
+      }
+    } else {
+      if (btnRoll) {
+        btnRoll.style.display = 'none';
+      }
+      if (btnValidate) {
+        btnValidate.innerText = 'Validar';
+        btnValidate.style.display = 'block';
+        btnValidate.disabled = true;
+      }
+    }
+  } else {
+    if (btnRoll) {
+      btnRoll.style.display = 'none';
+    }
+    if (btnValidate) {
+      btnValidate.innerText = 'Validar';
+      btnValidate.style.display = 'block';
+      btnValidate.disabled = state.hasValidatedTurn;
+      if (state.hasValidatedTurn) {
+        btnValidate.classList.remove('forced-penalty-red', 'forced-penalty-blue');
+      }
+    }
+  }
+
+  if (state.hasValidatedTurn) {
+    showWaitPanel();
+  } else {
+    hideWaitPanel();
   }
 }
 
 export function updateCellHighlights() {
   const allCells = document.querySelectorAll('.cell');
+  const btnValidate = document.getElementById('btn-validate-turn');
 
   if (!state.gameStarted || !state.hasRolledInTurn || state.hasValidatedTurn || state.gameOverTriggered) {
+    if (btnValidate) {
+      btnValidate.classList.remove('forced-penalty-red', 'forced-penalty-blue');
+    }
     allCells.forEach(cell => {
       cell.classList.remove('selectable', 'selectable-white', 'selectable-color', 'dimmed');
       if (!cell.classList.contains('marked')) cell.classList.add('dimmed');
@@ -157,42 +222,36 @@ export function updateCellHighlights() {
     if (!row || row.classList.contains('fully-closed')) return;
 
     const cells = Array.from(row.querySelectorAll('.cell:not(.lock)'));
-
     const hasColorInThisRow = state.markedThisTurn.some(m => m.actionType === 'color' && m.color === color);
+
     if (!state.hasMarkedWhiteThisTurn && !hasColorInThisRow) {
       const whiteCell = cells.find(c => parseInt(c.dataset.val) === whiteSum);
-      if (whiteCell && isCellClickableInRow(row, whiteCell)) {
-        validWhiteCells.add(whiteCell);
-      }
+      if (whiteCell && isCellClickableInRow(row, whiteCell)) validWhiteCells.add(whiteCell);
     }
 
     if (isMyTurn && !state.hasMarkedColorThisTurn) {
       const dieColorKey = color === 'red' ? 'r' : color === 'yellow' ? 'y' : color === 'green' ? 'g' : 'b';
       const dieColorVal = state.currentDiceResults[dieColorKey];
       if (dieColorVal) {
-        const combo1 = state.currentDiceResults.w1 + dieColorVal;
-        const combo2 = state.currentDiceResults.w2 + dieColorVal;
-
-        [combo1, combo2].forEach(val => {
+        [state.currentDiceResults.w1 + dieColorVal, state.currentDiceResults.w2 + dieColorVal].forEach(val => {
           const colorCell = cells.find(c => parseInt(c.dataset.val) === val);
-          if (colorCell && isCellClickableInRow(row, colorCell)) {
-            validColorCells.add(colorCell);
-          }
+          if (colorCell && isCellClickableInRow(row, colorCell)) validColorCells.add(colorCell);
         });
       }
     }
   });
 
-  // Control de animación y estado para falta obligatoria
-  const btnValidate = document.getElementById('btn-validate-turn');
   if (btnValidate) {
-    const hasNoOptions = (validWhiteCells.size === 0 && validColorCells.size === 0);
-    if (isMyTurn && state.hasRolledInTurn && !state.hasMarkedInTurn && hasNoOptions) {
-      btnValidate.classList.add('forced-penalty');
-      state.isForcedPenalty = true;
-    } else {
-      btnValidate.classList.remove('forced-penalty');
-      state.isForcedPenalty = false;
+    btnValidate.classList.remove('forced-penalty-red', 'forced-penalty-blue');
+    state.isForcedPenalty = false;
+
+    if (state.hasRolledInTurn && !state.hasMarkedInTurn) {
+      if (isMyTurn && validWhiteCells.size === 0 && validColorCells.size === 0) {
+        btnValidate.classList.add('forced-penalty-red');
+        state.isForcedPenalty = true;
+      } else if (!isMyTurn && validWhiteCells.size === 0) {
+        btnValidate.classList.add('forced-penalty-blue');
+      }
     }
   }
 
@@ -222,14 +281,11 @@ export function lockRowGlobally(color) {
   if (die) die.style.display = 'none';
 
   row.classList.add('fully-closed');
-
-  // Identificar si fuiste tú quien cerró la fila inspeccionando si marcaste el candado
   const lockCell = row.querySelector('.cell.lock');
   const isMe = lockCell && lockCell.classList.contains('marked');
 
   row.classList.remove('closed-by-me', 'closed-by-other');
   row.classList.add(isMe ? 'closed-by-me' : 'closed-by-other');
-
   updateRowLockout(row);
 }
 
@@ -239,7 +295,6 @@ export function updateLeaderboardTable() {
   tbody.innerHTML = '';
 
   const scoresArray = Object.values(state.playerScoresMap).sort((a, b) => b.score - a.score);
-
   scoresArray.forEach((item, index) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>#${index + 1}</td><td>${item.name}</td><td><b>${item.score} pts</b></td>`;

@@ -20,6 +20,8 @@ export function handleNetworkData(data) {
     state.playersList = data.players;
     renderPlayerLists();
     saveSessionState();
+  } else if (data.type === 'PLAYER_LEFT') {
+    handleRemotePlayerLeft(data);
   } else if (data.type === 'GAME_STARTED') {
     state.playersList = data.players;
     state.activePlayerId = data.activePlayerId;
@@ -75,6 +77,7 @@ export function handleNetworkData(data) {
 
 export function handleHostConnection(conn) {
   state.connections.push(conn);
+
   conn.on('data', (data) => {
     if (data.type === 'HANDSHAKE') {
       if (state.gameStarted) {
@@ -89,6 +92,8 @@ export function handleHostConnection(conn) {
         return;
       }
       const newPlayerId = 'P' + (state.playersList.length + 1);
+      conn.playerId = newPlayerId; // Asignamos ID a la conexión para rastrearla al desconectarse
+
       state.playersList.push({ id: newPlayerId, name: nameTrimmed });
       conn.send({ type: 'WELCOME', playerId: newPlayerId, players: state.playersList, activePlayerId: state.activePlayerId, gameStarted: state.gameStarted });
       broadcast({ type: 'PLAYER_JOINED', players: state.playersList });
@@ -100,6 +105,57 @@ export function handleHostConnection(conn) {
       handleNetworkData(data);
     }
   });
+
+  // DETECTAR DESCONEXIÓN DE UN JUGADOR
+  conn.on('close', () => {
+    if (conn.playerId) {
+      handlePlayerDisconnect(conn.playerId);
+    }
+  });
+}
+
+function handlePlayerDisconnect(disconnectedId) {
+  const index = state.playersList.findIndex(p => p.id === disconnectedId);
+  if (index === -1) return;
+
+  const leavingPlayer = state.playersList[index];
+  state.playersList.splice(index, 1);
+  state.connections = state.connections.filter(c => c.playerId !== disconnectedId);
+
+  // Si era el turno del jugador que se fue y la partida está en curso, avanzamos turno
+  if (state.gameStarted && state.activePlayerId === disconnectedId) {
+    if (state.playersList.length > 0) {
+      const nextIndex = index % state.playersList.length;
+      state.activePlayerId = state.playersList[nextIndex].id;
+    }
+    resetTurnFlags();
+  }
+
+  const payload = {
+    type: 'PLAYER_LEFT',
+    playerId: disconnectedId,
+    playerName: leavingPlayer.name,
+    players: state.playersList,
+    activePlayerId: state.activePlayerId
+  };
+
+  broadcast(payload);
+  handleRemotePlayerLeft(payload);
+}
+
+function handleRemotePlayerLeft(data) {
+  state.playersList = data.players;
+  state.activePlayerId = data.activePlayerId;
+
+  showAlert(`⚠️ ${data.playerName} ha abandonado la partida.`, 'Jugador Desconectado');
+
+  if (state.gameStarted) {
+    updateTurnUI();
+    updateCellHighlights();
+  } else {
+    renderPlayerLists();
+  }
+  saveSessionState();
 }
 
 export function processPlayerValidation(playerId, playerName, pendingClosedRows = []) {
@@ -195,6 +251,7 @@ export function checkGameOver() {
 export function startGameUI() {
   state.gameStarted = true;
   document.body.classList.add('in-game');
+
   const netBar = document.querySelector('.network-bar');
   const gameArea = document.getElementById('game-area');
 

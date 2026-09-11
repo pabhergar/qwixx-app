@@ -1,7 +1,7 @@
 import { state, resetTurnFlags, saveSessionState, colorNamesSpanish } from './js/state.js';
 import { calculateScores } from './js/game.js';
 import { updateCellHighlights, renderPlayerLists, updateTurnUI, hideWaitPanel, toggleWaitPanel, showAlert, showConfirm } from './js/ui.js';
-import { broadcast, handleHostConnection, handleNetworkData, processPlayerValidation, startGameUI, exitGame } from './js/network.js';
+import { broadcast, initNostrNetwork, processPlayerValidation, startGameUI, exitGame } from './js/network.js';
 
 window.addEventListener('DOMContentLoaded', () => {
   const savedName = localStorage.getItem('qwixx_player_name');
@@ -34,19 +34,23 @@ function getAndValidateName() {
 function createRoom() {
   const name = getAndValidateName();
   if (!name) return;
+
   state.myPlayerName = name;
   state.roomCode = Math.floor(1000 + Math.random() * 9000).toString();
+  state.isHost = true;
+  state.myPlayerId = 'P1';
+  state.playersList = [{ id: 'P1', name: state.myPlayerName }];
 
-  state.peer = new Peer('qwixx-' + state.roomCode);
-  state.peer.on('open', () => {
-    state.isHost = true; state.myPlayerId = 'P1'; state.playersList = [{ id: 'P1', name: state.myPlayerName }];
-    document.getElementById('net-setup').style.display = 'none';
-    document.getElementById('lobby-section').style.display = 'block';
-    document.getElementById('display-room-code').innerText = state.roomCode;
-    document.getElementById('host-controls').style.display = 'block';
-    renderPlayerLists(); saveSessionState();
-  });
-  state.peer.on('connection', handleHostConnection);
+  // Inicializa la red Nostr apuntando al código de sala
+  initNostrNetwork(state.roomCode);
+
+  document.getElementById('net-setup').style.display = 'none';
+  document.getElementById('lobby-section').style.display = 'block';
+  document.getElementById('display-room-code').innerText = state.roomCode;
+  document.getElementById('host-controls').style.display = 'block';
+
+  renderPlayerLists();
+  saveSessionState();
 }
 
 function joinRoom() {
@@ -57,18 +61,20 @@ function joinRoom() {
 
   state.myPlayerName = name;
   state.roomCode = inputCode;
-  state.peer = new Peer();
-  state.peer.on('open', () => {
-    state.hostConn = state.peer.connect('qwixx-' + inputCode);
-    state.hostConn.on('open', () => {
-      document.getElementById('net-setup').style.display = 'none';
-      document.getElementById('lobby-section').style.display = 'block';
-      document.getElementById('display-room-code').innerText = inputCode;
-      document.getElementById('client-waiting').style.display = 'block';
-      state.hostConn.send({ type: 'HANDSHAKE', name: state.myPlayerName });
-    });
-    state.hostConn.on('data', handleNetworkData);
-  });
+  state.isHost = false;
+
+  // Inicializa los sockets Nostr hacia los relays públicos
+  initNostrNetwork(inputCode);
+
+  document.getElementById('net-setup').style.display = 'none';
+  document.getElementById('lobby-section').style.display = 'block';
+  document.getElementById('display-room-code').innerText = inputCode;
+  document.getElementById('client-waiting').style.display = 'block';
+
+  // Pequeño margen para asegurar que los WebSockets estén abiertos antes de emitir la solicitud
+  setTimeout(() => {
+    broadcast({ type: 'HANDSHAKE', name: state.myPlayerName });
+  }, 500);
 }
 
 async function startGame() {

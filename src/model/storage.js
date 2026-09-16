@@ -4,9 +4,9 @@ import { state } from './state.js';
 // arrancar); se mantiene para un futuro "reconectar a la partida".
 
 export function saveSession() {
-  if (!state.roomCode) return;
+  if (!state.sessionId) return;
 
-  localStorage.setItem('qwixx_room_code', state.roomCode);
+  localStorage.setItem('qwixx_session_id', state.sessionId);
   localStorage.setItem('qwixx_is_host', state.isHost);
   localStorage.setItem('qwixx_my_id', state.myPlayerId);
   localStorage.setItem('qwixx_game_started', state.gameStarted);

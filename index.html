@@ -52,28 +52,33 @@
         </div>
     </div>
 
-    <!-- LOBBY & NETWORK -->
+    <!-- LOBBY & LISTADO DE PARTIDAS -->
     <div class="network-bar">
         <div class="network-controls" id="net-setup">
             <input type="text" id="player-name-input" class="net-input name" placeholder="Tu Nombre" maxlength="12">
-            <button class="net-btn" id="btn-create-room">Crear Sala</button>
-            <span style="font-size: 12px; font-weight: bold; color: #64748b;">O</span>
-            <input type="text" id="room-code-input" class="net-input code" placeholder="CÓDIGO" maxlength="4">
-            <button class="net-btn" id="btn-join-room" style="background:#10b981;">Unirse</button>
+            <button class="net-btn" id="btn-create-room">Crear Partida</button>
+        </div>
+
+        <div id="lobby-list-section">
+            <div class="lobby-list-title">Partidas disponibles</div>
+            <ul id="games-list" class="games-list"></ul>
+            <div id="no-games-placeholder" class="no-games-placeholder" style="display: none;">No hay partidas en este momento</div>
         </div>
 
         <div class="lobby-section" id="lobby-section">
-            <h3>Sala: <span id="display-room-code" class="room-code-display"></span></h3>
+            <h3>Partida de <span id="display-host-name" class="room-code-display"></span></h3>
             <div style="text-align: left; margin-bottom: 5px; font-size: 13px; font-weight: bold; color: #475569;">Jugadores en sala:</div>
             <ul id="player-list" class="player-list"></ul>
-            
+
             <div id="host-controls" style="display: none; margin-top: 15px;">
                 <button class="net-btn" id="btn-start-game" style="background:#10b981; width: 100%; font-size: 16px;">▶ Iniciar Partida</button>
             </div>
-            
+
             <div id="client-waiting" class="waiting-text" style="display: none;">
                 ⏳ Esperando a que el anfitrión inicie la partida...
             </div>
+
+            <button class="btn-secondary-action" id="btn-leave-lobby" style="margin-top: 10px;">← Abandonar sala</button>
         </div>
     </div>
 

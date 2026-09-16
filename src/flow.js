@@ -1,6 +1,6 @@
 import { state, resetTurn, closeBoardRows } from './model/state.js';
 import { saveSession } from './model/storage.js';
-import { broadcast } from './net/transport.js';
+import { broadcast, updateLobbyEntry } from './net/transport.js';
 import { computeScores, getGameOverReason } from './logic/scoring.js';
 import { COLOR_NAMES_ES } from './constants.js';
 import { renderBoard, renderScores, renderDice } from './ui/board.js';
@@ -71,6 +71,7 @@ export function checkGameOverLocal() {
   state.gameOverTriggered = true;
   submitMyScore();
   broadcast({ type: 'GAME_OVER', reason, playerId: state.myPlayerId, playerName: state.myPlayerName, score: state.scores[state.myPlayerId].score });
+  if (state.isHost) updateLobbyEntry({ status: 'finished' });
   showGameOverModal(reason);
   return true;
 }

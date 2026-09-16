@@ -2,7 +2,6 @@ import { state, activePlayerName } from '../model/state.js';
 import { isMyTurn, isForcedPenalty, hasNoWhiteOption } from '../logic/rules.js';
 
 // Render de paneles de control, listas de jugadores y pantallas de lobby.
-
 export function renderTurnControls() {
   const activeName = activePlayerName();
   const myTurn = isMyTurn(state);
@@ -71,11 +70,40 @@ export function renderPlayers() {
     const isCurrentTurn = (p.id === state.activePlayerId);
 
     const li = document.createElement('li');
-    li.innerHTML = `<span>${isCurrentTurn ? '🎲 ' : ''}${p.name} ${p.id === 'P1' ? '👑' : ''}</span> <span>${isValidated ? '✔️' : '⏳'}</span>`;
+    li.innerHTML = `<span>${isCurrentTurn ? '🎲 ' : ''}${escapeHtml(p.name)} ${p.id === 'P1' ? '👑' : ''}</span> <span>${isValidated ? '✔️' : '⏳'}</span>`;
     ul.appendChild(li);
 
     if (waitUl) waitUl.appendChild(li.cloneNode(true));
   });
+}
+
+export function renderGamesList() {
+  const ul = document.getElementById('games-list');
+  const placeholder = document.getElementById('no-games-placeholder');
+  if (!ul) return;
+
+  const available = state.lobbyGames
+    .filter((g) => g.status === 'lobby')
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+  ul.innerHTML = '';
+  if (placeholder) placeholder.style.display = available.length === 0 ? 'block' : 'none';
+
+  available.forEach((g) => {
+    const count = g.playerCount || 1;
+    const li = document.createElement('li');
+    li.className = 'game-item';
+    li.innerHTML = `
+      <span class="game-info"><b>Partida de ${escapeHtml(g.hostName)}</b>
+        <span class="game-meta">${count} jugador${count === 1 ? '' : 'es'}</span>
+      </span>
+      <button class="net-btn join" data-session-id="${g.id}">Unirse</button>`;
+    ul.appendChild(li);
+  });
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 export function showWaitPanel() {
@@ -106,16 +134,26 @@ export function enterGameScreens() {
   if (gameArea) gameArea.style.display = 'block';
 }
 
-export function showLobbyAsHost(roomCode) {
-  document.getElementById('net-setup').style.display = 'none';
-  document.getElementById('lobby-section').style.display = 'block';
-  document.getElementById('display-room-code').innerText = roomCode;
-  document.getElementById('host-controls').style.display = 'block';
+export function showGameBrowser() {
+  document.getElementById('net-setup').style.display = 'flex';
+  document.getElementById('lobby-list-section').style.display = 'block';
+  document.getElementById('lobby-section').style.display = 'none';
 }
 
-export function showLobbyAsClient(roomCode) {
+export function showSessionAsHost(hostName) {
   document.getElementById('net-setup').style.display = 'none';
+  document.getElementById('lobby-list-section').style.display = 'none';
   document.getElementById('lobby-section').style.display = 'block';
-  document.getElementById('display-room-code').innerText = roomCode;
+  document.getElementById('display-host-name').innerText = hostName;
+  document.getElementById('host-controls').style.display = 'block';
+  document.getElementById('client-waiting').style.display = 'none';
+}
+
+export function showSessionAsClient(hostName) {
+  document.getElementById('net-setup').style.display = 'none';
+  document.getElementById('lobby-list-section').style.display = 'none';
+  document.getElementById('lobby-section').style.display = 'block';
+  document.getElementById('display-host-name').innerText = hostName;
+  document.getElementById('host-controls').style.display = 'none';
   document.getElementById('client-waiting').style.display = 'block';
 }

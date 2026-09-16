@@ -28,12 +28,15 @@ export function createTurn() {
 
 export function createState() {
   return {
-    roomCode: '',
+    sessionId: '',
     isHost: false,
     myPlayerId: 'P1',
     myPlayerName: '',
     gameStarted: false,
     gameOverTriggered: false,
+
+    lobbyGames: [],
+    sessionJoined: false,
 
     playersList: [],
     activePlayerId: 'P1',
@@ -53,6 +56,21 @@ export const state = createState();
 
 export function resetTurn() {
   state.turn = createTurn();
+}
+
+// Vuelve al estado "fuera de partida" (el nombre del jugador y el tablero se conservan)
+export function resetSessionState() {
+  state.sessionId = '';
+  state.isHost = false;
+  state.myPlayerId = 'P1';
+  state.gameStarted = false;
+  state.gameOverTriggered = false;
+  state.sessionJoined = false;
+  state.playersList = [];
+  state.activePlayerId = 'P1';
+  state.validatedPlayers.clear();
+  state.declaredClosures.clear();
+  state.scores = {};
 }
 
 export function addBoardMark(color, val) {

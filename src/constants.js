@@ -25,11 +25,3 @@ export const ROW_VALUES = {
 };
 
 export const DIE_KEY_BY_COLOR = { red: 'r', yellow: 'y', green: 'g', blue: 'b' };
-
-// Relays públicos redundantes para el transporte Nostr
-export const NOSTR_RELAYS = [
-  'wss://relay.damus.io',
-  'wss://nos.lol',
-  'wss://relay.nostr.band',
-  'wss://relay.snort.social'
-];

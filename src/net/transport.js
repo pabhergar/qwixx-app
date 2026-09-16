@@ -1,111 +1,131 @@
-import { NOSTR_RELAYS } from '../constants.js';
+import { initializeApp } from 'firebase/app';
+import {
+  getDatabase, ref, push, set, update, onValue, onChildAdded, onDisconnect
+} from 'firebase/database';
+import { firebaseConfig } from './firebase-config.js';
 import { state } from '../model/state.js';
 
-// Transporte puro sobre Nostr: eventos efímeros (kind 20000) etiquetados con el
-// código de sala. No conoce nada del juego, solo envía y recibe payloads.
+// Transporte sobre Realtime Database. Estructura:
+//   lobby/{sesionId}              -> registro de partidas (lo escuchan todos)
+//   events/{sesionId}/{eventoId}  -> bus de mensajes de una partida
+//   presence/{sesionId}/{playerId}-> presencia con onDisconnect
+// No conoce nada del juego: solo envía y recibe payloads.
 
-let sockets = [];
+let db = null;
 let payloadHandler = null;
-let firstConnectionDone = false;
-const sendQueue = [];
-const seenPayloads = new Set();
+let statusHandler = null;
+let sessionUnsubs = [];
+let armedDisconnects = [];
 
-const mySessionPubkey = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+const pageSessionId = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+
+export function initTransport() {
+  const app = initializeApp(firebaseConfig);
+  db = getDatabase(app);
+}
 
 export function getSessionId() {
-  return mySessionPubkey;
+  return pageSessionId;
 }
 
 export function onPayload(fn) {
   payloadHandler = fn;
 }
 
-export function disconnect() {
-  sockets.forEach((ws) => ws.close());
-  sockets = [];
-  sendQueue.length = 0;
-  firstConnectionDone = false;
+export function onSessionStatus(fn) {
+  statusHandler = fn;
 }
 
-export function connect(roomCode) {
-  disconnect();
+// Listado en vivo de partidas para todos los clientes conectados
+export function listenLobby(cb) {
+  onValue(ref(db, 'lobby'), (snap) => {
+    const games = [];
+    snap.forEach((child) => games.push({ id: child.key, ...child.val() }));
+    cb(games);
+  }, (err) => console.warn('Error escuchando el lobby:', err.message));
+}
 
-  NOSTR_RELAYS.forEach((url) => {
-    try {
-      const ws = new WebSocket(url);
+export function createSession(hostName) {
+  const sessionRef = push(ref(db, 'lobby'));
+  const sessionId = sessionRef.key;
 
-      ws.onopen = () => {
-        sockets.push(ws);
-        ws.send(JSON.stringify([
-          'REQ',
-          `sub-${roomCode}`,
-          { kinds: [20000], '#t': [`qwixx-v1-${roomCode}`] }
-        ]));
-        if (!firstConnectionDone) {
-          firstConnectionDone = true;
-          flushQueue();
-        }
-      };
+  set(sessionRef, { hostName, status: 'lobby', createdAt: Date.now(), playerCount: 1 });
 
-      ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          if (msg[0] !== 'EVENT' || !msg[2] || !msg[2].content) return;
-          const payload = JSON.parse(msg[2].content);
-          if (payload._senderSession === mySessionPubkey) return;
-          if (isDuplicate(payload)) return;
-          if (payloadHandler) payloadHandler(payload);
-        } catch {
-          // Mensajes con formato no válido: se ignoran
-        }
-      };
-    } catch {
-      console.warn(`No se pudo conectar al relay ${url}`);
-    }
+  // El host es la autoridad: si se desconecta, la partida muere y se limpia
+  const hostCleanup = onDisconnect(ref(db));
+  hostCleanup.update({
+    [`lobby/${sessionId}`]: null,
+    [`events/${sessionId}`]: null,
+    [`presence/${sessionId}`]: null
   });
+  armedDisconnects.push(hostCleanup);
+
+  subscribeSession(sessionId);
+  return sessionId;
+}
+
+export function joinSession(sessionId) {
+  subscribeSession(sessionId);
+}
+
+// Presencia del jugador: si cierra la pestaña o pierde la conexión,
+// se emite su PLAYER_LEFT automáticamente
+export function attachPresence(playerId) {
+  if (!db || !state.sessionId) return;
+
+  const presenceOp = onDisconnect(ref(db, `presence/${state.sessionId}/${playerId}`));
+  presenceOp.remove();
+  armedDisconnects.push(presenceOp);
+  set(ref(db, `presence/${state.sessionId}/${playerId}`), true);
+
+  const leaveEventOp = onDisconnect(push(ref(db, `events/${state.sessionId}`)));
+  leaveEventOp.set({ sender: pageSessionId, payload: { type: 'PLAYER_LEFT', playerId, playerName: state.myPlayerName } });
+  armedDisconnects.push(leaveEventOp);
 }
 
 export function broadcast(data) {
-  if (!state.roomCode) return;
-
-  const payload = {
-    ...data,
-    _senderSession: mySessionPubkey,
-    _senderPlayerId: state.myPlayerId
-  };
-
-  const json = JSON.stringify([
-    'EVENT',
-    {
-      pubkey: mySessionPubkey,
-      created_at: Math.floor(Date.now() / 1000),
-      kind: 20000,
-      tags: [['t', `qwixx-v1-${state.roomCode}`]],
-      content: JSON.stringify(payload)
-    }
-  ]);
-
-  if (!firstConnectionDone) sendQueue.push(json);
-  else sendToOpenSockets(json);
+  if (!db || !state.sessionId) return;
+  push(ref(db, `events/${state.sessionId}`), { sender: pageSessionId, payload: data });
 }
 
-// El mismo evento puede llegar replicado por varios relays
-function isDuplicate(payload) {
-  const key = `${payload._senderSession}:${JSON.stringify(payload)}`;
-  if (seenPayloads.has(key)) return true;
-  seenPayloads.add(key);
-  if (seenPayloads.size > 200) seenPayloads.delete(seenPayloads.values().next().value);
-  return false;
+export function updateLobbyEntry(fields) {
+  if (!db || !state.sessionId) return;
+  update(ref(db, `lobby/${state.sessionId}`), fields);
 }
 
-function flushQueue() {
-  while (sendQueue.length > 0) {
-    sendToOpenSockets(sendQueue.shift());
-  }
-}
-
-function sendToOpenSockets(json) {
-  sockets.forEach((ws) => {
-    if (ws.readyState === WebSocket.OPEN) ws.send(json);
+// Elimina la partida completa (solo el host)
+export function removeSession() {
+  if (!db || !state.sessionId) return;
+  update(ref(db), {
+    [`lobby/${state.sessionId}`]: null,
+    [`events/${state.sessionId}`]: null,
+    [`presence/${state.sessionId}`]: null
   });
+}
+
+function subscribeSession(sessionId) {
+  detachSession();
+
+  sessionUnsubs.push(onChildAdded(ref(db, `events/${sessionId}`), (snap) => {
+    const evt = snap.val();
+    if (!evt || !evt.payload) return;
+    if (evt.sender === pageSessionId) return;
+    if (payloadHandler) payloadHandler({ ...evt.payload, _senderSession: evt.sender });
+  }, (err) => console.warn('Error escuchando eventos:', err.message)));
+
+  // La partida desaparece (host desconectado) cuando el estado pasa a null
+  sessionUnsubs.push(onValue(ref(db, `lobby/${sessionId}/status`), (snap) => {
+    if (statusHandler) statusHandler(snap.val());
+  }, (err) => console.warn('Error escuchando el estado de la partida:', err.message)));
+}
+
+function detachSession() {
+  sessionUnsubs.forEach((unsub) => unsub());
+  sessionUnsubs = [];
+}
+
+export function disconnect() {
+  detachSession();
+  armedDisconnects.forEach((op) => op.cancel().catch(() => {}));
+  armedDisconnects = [];
 }

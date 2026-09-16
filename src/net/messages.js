@@ -1,21 +1,25 @@
 import { state } from '../model/state.js';
 import { saveSession } from '../model/storage.js';
-import { onPayload, getSessionId } from './transport.js';
+import * as transport from './transport.js';
 import * as host from './host.js';
 import {
   enterGame, flowDiceRolled, flowTurnChanged, flowClosureAlert, checkGameOverLocal, submitMyScore, renderGame
 } from '../flow.js';
 import { renderPlayers } from '../ui/hud.js';
 import { showAlert, showGameOverModal, updateLeaderboard } from '../ui/modals.js';
-import { exitGame } from '../actions/session.js';
+import { resetToStart } from '../actions/session.js';
 
 // Routing de mensajes de red: traduce payloads a transiciones de flow.js.
 
 export function initNetworkMessaging() {
-  onPayload(routePayload);
+  transport.onPayload(routePayload);
 }
 
 function routePayload(data) {
+  // REJECTED es lo único procesable antes de estar dentro de una partida:
+  // el resto del historial de eventos se ignora hasta recibir WELCOME
+  if (!state.sessionJoined && data.type !== 'REJECTED') return;
+
   if (state.isHost) {
     if (data.type === 'HANDSHAKE') return host.handleHandshake(data);
     if (data.type === 'PLAYER_VALIDATED') {
@@ -28,16 +32,18 @@ function routePayload(data) {
 function handleNetworkData(data) {
   switch (data.type) {
     case 'REJECTED':
-      if (data.targetSession === getSessionId()) {
-        showAlert(data.reason, 'Conexión rechazada').then(() => exitGame(true));
+      if (data.targetSession === transport.getSessionId()) {
+        resetToStart(data.reason, 'Conexión rechazada');
       }
       break;
 
     case 'WELCOME':
-      if (data.targetSession === getSessionId() || data.targetName === state.myPlayerName) {
+      if (data.targetSession === transport.getSessionId() || data.targetName === state.myPlayerName) {
         state.myPlayerId = data.playerId;
         state.playersList = data.players;
         state.activePlayerId = data.activePlayerId;
+        state.sessionJoined = true;
+        transport.attachPresence(data.playerId);
         renderPlayers();
         saveSession();
       }
@@ -49,14 +55,23 @@ function handleNetworkData(data) {
       saveSession();
       break;
 
-    case 'PLAYER_LEFT':
-      state.playersList = data.players;
-      state.activePlayerId = data.activePlayerId;
+    case 'PLAYER_LEFT': {
+      // Puede llegar duplicado (salida explícita + onDisconnect): si el jugador
+      // ya no está en la lista, no hay nada que hacer
+      if (!state.playersList.some((p) => p.id === data.playerId)) break;
+
+      state.playersList = state.playersList.filter((p) => p.id !== data.playerId);
+      state.activePlayerId = state.activePlayerId === data.playerId
+        ? (state.playersList[0] || {}).id
+        : state.activePlayerId;
+
       showAlert(`⚠️ ${data.playerName} ha abandonado la partida.`, 'Jugador Desconectado');
+      if (state.isHost) transport.updateLobbyEntry({ playerCount: state.playersList.length });
       if (state.gameStarted) renderGame();
       else renderPlayers();
       saveSession();
       break;
+    }
 
     case 'GAME_STARTED':
       state.playersList = data.players;

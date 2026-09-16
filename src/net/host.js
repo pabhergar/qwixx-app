@@ -1,6 +1,6 @@
 import { state, nextPlayerId } from '../model/state.js';
 import { saveSession } from '../model/storage.js';
-import { broadcast } from './transport.js';
+import { broadcast, updateLobbyEntry } from './transport.js';
 import { flowClosureAlert, flowTurnChanged, checkGameOverLocal } from '../flow.js';
 import { renderPlayers } from '../ui/hud.js';
 
@@ -33,6 +33,7 @@ export function handleHandshake(data) {
   });
 
   broadcast({ type: 'PLAYER_JOINED', players: state.playersList });
+  updateLobbyEntry({ playerCount: state.playersList.length });
   renderPlayers();
   saveSession();
 }

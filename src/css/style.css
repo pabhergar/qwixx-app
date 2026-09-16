@@ -32,6 +32,16 @@
     --btn-sec-hover: #94a3b8;
     --final-bg: #1e293b;
     --final-text: #ffffff;
+    --die-white-bg: #ffffff;
+    --die-white-text: #1e293b;
+    --die-white-border: #cbd5e1;
+    --sel-white-bg: #ffffff;
+    --sel-white-text: #000000;
+    --sel-white-border: #10b981;
+    --turn-chip-bg: #ffffff;
+    --turn-chip-border: #334155;
+    --turn-chip-x: #0f172a;
+    --turn-chip-shadow: rgba(51, 65, 85, 0.3);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -67,6 +77,16 @@
         --btn-sec-hover: #475569;
         --final-bg: #f1f5f9;
         --final-text: #0f172a;
+        --die-white-bg: #0b1220;
+        --die-white-text: #f8fafc;
+        --die-white-border: #475569;
+        --sel-white-bg: #0b1220;
+        --sel-white-text: #f8fafc;
+        --sel-white-border: #10b981;
+        --turn-chip-bg: #0b1220;
+        --turn-chip-border: #e2e8f0;
+        --turn-chip-x: #f1f5f9;
+        --turn-chip-shadow: rgba(226, 232, 240, 0.12);
     }
 }
 
@@ -192,7 +212,7 @@ h1.game-title { text-align: center; color: var(--text-strong); margin: 0 0 10px 
     user-select: none; 
     padding-bottom: 2px;
 }
-.die.white1, .die.white2 { background-color: #ffffff; color: #1e293b; border: 2px solid #cbd5e1; }
+.die.white1, .die.white2 { background-color: var(--die-white-bg); color: var(--die-white-text); border: 2px solid var(--die-white-border); }
 .die.red { background-color: #ef4444; color: #ffffff; }
 .die.yellow { background-color: #eab308; color: #ffffff; }
 .die.green { background-color: #22c55e; color: #ffffff; }
@@ -314,7 +334,7 @@ h1.game-title { text-align: center; color: var(--text-strong); margin: 0 0 10px 
 .row.yellow .cell.selectable-color { background-color: var(--sel-yellow); border-color: #ca8a04 !important; animation: pulseGlow 1.2s infinite alternate; }
 .row.green .cell.selectable-color { background-color: var(--sel-green); border-color: #22c55e !important; animation: pulseGlow 1.2s infinite alternate; }
 .row.blue .cell.selectable-color { background-color: var(--sel-blue); border-color: #3b82f6 !important; animation: pulseGlow 1.2s infinite alternate; }
-.cell.selectable-white { background-color: #ffffff !important; border-color: #10b981 !important; color: #000 !important; animation: pulseGlow 1.2s infinite alternate !important; z-index: 6; }
+.cell.selectable-white { background-color: var(--sel-white-bg) !important; border-color: var(--sel-white-border) !important; color: var(--sel-white-text) !important; animation: pulseGlow 1.2s infinite alternate !important; z-index: 6; }
 @keyframes pulseGlow { 0% { transform: scale(1); } 100% { transform: scale(1.05); } }
 
 /* Casillas apagadas: el fondo se funde con el color de la fila (alpha solo en
@@ -340,8 +360,8 @@ h1.game-title { text-align: center; color: var(--text-strong); margin: 0 0 10px 
 }
 
 .cell.marked { background-color: var(--surface-2) !important; opacity: 1 !important; border-color: transparent !important; pointer-events: auto !important; }
-.cell.marked.turn-marked::after { color: #0f172a; font-weight: 900; }
-.cell.marked.turn-marked { background-color: #ffffff !important; border: 2px solid #334155 !important; box-shadow: 0 0 6px rgba(51, 65, 85, 0.3) !important; cursor: pointer !important; }
+.cell.marked.turn-marked::after { color: var(--turn-chip-x); font-weight: 900; }
+.cell.marked.turn-marked { background-color: var(--turn-chip-bg) !important; border: 2px solid var(--turn-chip-border) !important; box-shadow: 0 0 6px var(--turn-chip-shadow) !important; cursor: pointer !important; }
 .cell.lock.marked::after { color: var(--border); font-size: 1.4em; }
 .cell.lock.marked.turn-marked::after { color: #dc2626; }
 

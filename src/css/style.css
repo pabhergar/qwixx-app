@@ -43,15 +43,16 @@ h1.game-title { text-align: center; color: #1e293b; margin: 0 0 10px 0; font-siz
 .net-input.name { width: 120px; font-weight: bold; }
 .net-input.code { width: 80px; text-transform: uppercase; font-weight: bold; }
 
-.lobby-section { background: white; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1; display: none; }
+.lobby-card { background: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1; margin-top: 10px; }
+.lobby-section { display: none; }
 .room-code-display { font-size: 24px; color: #3b82f6; letter-spacing: 2px; }
 .player-list { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-direction: column; gap: 6px; text-align: left; }
 .player-list li { background: #f1f5f9; padding: 8px 12px; border-radius: 6px; font-weight: 600; color: #334155; font-size: 13px; display: flex; align-items: center; justify-content: space-between; }
 
-/* LISTADO DE PARTIDAS DISPONIBLES */
-.lobby-list-title { text-align: left; margin: 10px 0 5px; font-size: 13px; font-weight: bold; color: #475569; }
+/* LISTADO DE PARTIDAS DISPONIBLES (mismo estilo de items que la lista de jugadores) */
+.lobby-list-title { text-align: left; margin: 0 0 5px; font-size: 13px; font-weight: bold; color: #475569; }
 .games-list { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 6px; text-align: left; }
-.game-item { background: #ffffff; border: 1px solid #cbd5e1; padding: 8px 12px; border-radius: 6px; font-size: 13px; color: #334155; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.game-item { background: #f1f5f9; padding: 8px 12px; border-radius: 6px; font-size: 13px; color: #334155; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .game-item .game-info { display: flex; flex-direction: column; gap: 2px; font-weight: 600; }
 .game-item .game-meta { color: #64748b; font-size: 12px; font-weight: normal; }
 .net-btn.join { background: #10b981; padding: 6px 14px; font-size: 13px; flex-shrink: 0; }

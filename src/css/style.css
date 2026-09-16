@@ -17,7 +17,11 @@
     --cell-yellow: #ca8a04;
     --cell-green: #16a34a;
     --cell-blue: #2563eb;
-    --cell-dimmed-bg: #d5dce8;
+    --cell-dimmed-bg: rgba(226, 232, 240, 0.3);
+    --dim-red: #7f1d1d;
+    --dim-yellow: #713f12;
+    --dim-green: #14532d;
+    --dim-blue: #1e3a8a;
     --sel-red: #fee2e2;
     --sel-yellow: #fef9c3;
     --sel-green: #dcfce7;
@@ -48,7 +52,11 @@
         --cell-yellow: #fde047;
         --cell-green: #86efac;
         --cell-blue: #93c5fd;
-        --cell-dimmed-bg: #293548;
+        --cell-dimmed-bg: rgba(41, 53, 72, 0.3);
+        --dim-red: #fecaca;
+        --dim-yellow: #fef3c7;
+        --dim-green: #dcfce7;
+        --dim-blue: #dbeafe;
         --sel-red: #4d2830;
         --sel-yellow: #4d431f;
         --sel-green: #20402e;
@@ -309,9 +317,13 @@ h1.game-title { text-align: center; color: var(--text-strong); margin: 0 0 10px 
 .cell.selectable-white { background-color: #ffffff !important; border-color: #10b981 !important; color: #000 !important; animation: pulseGlow 1.2s infinite alternate !important; z-index: 6; }
 @keyframes pulseGlow { 0% { transform: scale(1); } 100% { transform: scale(1.05); } }
 
-/* Sin opacidad: con ella el fondo de la casilla se mezclaba con el color de
-   la fila (ilegible en oscuro). Color sólido neutral + número tenue. */
+/* Casillas apagadas: el fondo se funde con el color de la fila (alpha solo en
+   el fondo), y el texto conserva toda su opacidad con un tono por fila */
 .cell.dimmed { background-color: var(--cell-dimmed-bg) !important; color: var(--text-faint) !important; pointer-events: none !important; border-color: transparent !important; }
+.row.red .cell.dimmed { color: var(--dim-red) !important; }
+.row.yellow .cell.dimmed { color: var(--dim-yellow) !important; }
+.row.green .cell.dimmed { color: var(--dim-green) !important; }
+.row.blue .cell.dimmed { color: var(--dim-blue) !important; }
 .cell.disabled { cursor: not-allowed; }
 .cell.lock { border-radius: 50%; font-size: 13px; }
 

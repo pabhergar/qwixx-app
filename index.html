@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="color-scheme" content="light">
-    <meta name="theme-color" content="#ffffff">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e6eaf2">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f172a">
     <title>Qwixx Online</title>
     <link rel="stylesheet" href="./src/css/style.css">
 </head>
@@ -16,7 +17,7 @@
     <div class="modal-overlay" id="game-over-modal">
       <div class="modal-content">
         <h2>🏆 Fin de la Partida</h2>
-        <div id="game-over-reason" style="font-size: 13px; color: #64748b; margin-bottom: 10px;"></div>
+        <div id="game-over-reason"></div>
         
         <div class="table-wrapper">
           <table class="leaderboard-table">
@@ -34,8 +35,8 @@
     <!-- MODAL ALERT -->
     <div class="modal-overlay" id="custom-alert-modal">
         <div class="modal-content" style="max-width: 380px;">
-            <h3 id="alert-title" style="margin-top: 0; color: #0f172a; font-size: 18px;">Atención</h3>
-            <p id="alert-message" style="font-size: 14px; color: #475569; margin: 15px 0; line-height: 1.4; white-space: pre-line;"></p>
+            <h3 id="alert-title" class="modal-h">Atención</h3>
+            <p id="alert-message" class="modal-msg"></p>
             <div class="modal-actions">
                 <button class="modal-btn modal-btn-primary" id="btn-close-alert">Entendido</button>
             </div>
@@ -45,8 +46,8 @@
     <!-- MODAL CONFIRM -->
     <div class="modal-overlay" id="custom-confirm-modal">
         <div class="modal-content" style="max-width: 380px;">
-            <h3 id="confirm-title" style="margin-top: 0; color: #0f172a; font-size: 18px;">Confirmar acción</h3>
-            <p id="confirm-message" style="font-size: 14px; color: #475569; margin: 15px 0; line-height: 1.4; white-space: pre-line;"></p>
+            <h3 id="confirm-title" class="modal-h">Confirmar acción</h3>
+            <p id="confirm-message" class="modal-msg"></p>
             <div class="modal-actions">
                 <button class="modal-btn modal-btn-secondary" id="btn-confirm-cancel">Cancelar</button>
                 <button class="modal-btn modal-btn-success" id="btn-confirm-ok">Aceptar</button>

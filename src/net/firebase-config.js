@@ -3,7 +3,7 @@
 // Nota: esta config no es secreta; se distribuye con la app y los datos se
 // protegen con las reglas de seguridad de la base de datos.
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyAL7ksBJYIkp1-L6-Zfs0BbKes9w1sL08k",
   authDomain: "qwixx-c52fd.firebaseapp.com",
   databaseURL: "https://qwixx-c52fd-default-rtdb.europe-west1.firebasedatabase.app",

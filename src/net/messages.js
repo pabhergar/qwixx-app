@@ -15,10 +15,13 @@ export function initNetworkMessaging() {
   transport.onPayload(routePayload);
 }
 
+// Mensajes procesables antes de estar dentro de la partida: los de registro
+// de sala (WELCOME/PLAYER_JOINED/PLAYER_LEFT) y REJECTED. El resto del
+// historial de eventos (dados, turnos, etc.) se ignora hasta entrar.
+const PRE_JOIN_MESSAGE_TYPES = new Set(['REJECTED', 'WELCOME', 'PLAYER_JOINED', 'PLAYER_LEFT']);
+
 function routePayload(data) {
-  // REJECTED es lo único procesable antes de estar dentro de una partida:
-  // el resto del historial de eventos se ignora hasta recibir WELCOME
-  if (!state.sessionJoined && data.type !== 'REJECTED') return;
+  if (!state.sessionJoined && !PRE_JOIN_MESSAGE_TYPES.has(data.type)) return;
 
   if (state.isHost) {
     if (data.type === 'HANDSHAKE') return host.handleHandshake(data);

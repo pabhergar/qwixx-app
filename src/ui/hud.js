@@ -106,18 +106,16 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+// El panel de jugadores es un overlay (tarjeta/hoja inferior), así que no
+// hace falta ocultar el panel de acciones
 export function showWaitPanel() {
-  const actionPanel = document.getElementById('action-panel');
   const waitPanel = document.getElementById('wait-panel');
-  if (actionPanel) actionPanel.style.display = 'none';
   if (waitPanel) waitPanel.style.display = 'flex';
 }
 
 export function hideWaitPanel() {
-  const actionPanel = document.getElementById('action-panel');
   const waitPanel = document.getElementById('wait-panel');
   if (waitPanel) waitPanel.style.display = 'none';
-  if (actionPanel) actionPanel.style.display = 'flex';
 }
 
 export function toggleWaitPanel() {

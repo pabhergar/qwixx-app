@@ -61,9 +61,10 @@ online/{userId}               { name: string|null, status: lobby|playing, since 
   pone el valor en `false` sin sacarlo de la partida (los demás ven "sin conexión"
   y el juego espera); al reconectar vuelve a `true` con el estado restaurado. Si
   el anfitrión no vuelve en ~90s, cualquier cliente limpia la partida (watchdog).
-- `online` — presencia global de la app (badge superior derecha): quién tiene la
-  página abierta y si está disponible o en partida; se elimina sola vía
-  `onDisconnect` al cerrar la pestaña.
+- `online` — presencia global de la app (badge superior derecha), registrada por
+  pestaña (`online/{userId}/{tabId}`) y agregada por usuario al mostrar: quién
+  tiene la página abierta y si está disponible o en partida. Se re-escribe en
+  cada reconexión (`.info/connected`) y se limpia sola vía `onDisconnect`.
 
 ## Notas
 

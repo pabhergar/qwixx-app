@@ -4,12 +4,13 @@ import {
 } from 'firebase/database';
 import { firebaseConfig } from './firebase-config.js';
 import { state } from '../model/state.js';
-import { getUserId } from '../model/identity.js';
+import { getUserId, getTabId } from '../model/identity.js';
 
 // Transporte sobre Realtime Database. Estructura:
-//   lobby/{sesionId}               -> registro de partidas (lo escuchan todos)
-//   events/{sesionId}/{eventoId}   -> bus de mensajes de una partida
-//   presence/{sesionId}/{userId}   -> true/false según conexión (onDisconnect)
+//   lobby/{sesionId}                  -> registro de partidas (lo escuchan todos)
+//   events/{sesionId}/{eventoId}      -> bus de mensajes de una partida
+//   presence/{sesionId}/{userId}      -> true/false según conexión (onDisconnect)
+//   online/{userId}/{tabId}           -> presencia global por pestaña
 // No conoce nada del juego: solo envía y recibe payloads.
 
 // Eventos procesables aunque sean anteriores a la suscripción: el host los
@@ -22,11 +23,21 @@ let payloadHandler = null;
 let statusHandler = null;
 let presenceHandler = null;
 let sessionUnsubs = [];
-let armedDisconnects = [];
+let globalRegistrations = [];
+let sessionRegistrations = [];
 
 export function initTransport() {
   const app = initializeApp(firebaseConfig);
   db = getDatabase(app);
+
+  // Patrón de presencia de Firebase: cada vez que la conexión se (re)establece
+  // hay que re-armar el onDisconnect y re-escribir el valor, porque un microcorte
+  // ejecuta los onDisconnect pendientes en el servidor
+  onValue(ref(db, '.info/connected'), (snap) => {
+    if (snap.val() !== true) return;
+    globalRegistrations.forEach((apply) => apply());
+    sessionRegistrations.forEach((apply) => apply());
+  });
 }
 
 export function onPayload(fn) {
@@ -50,25 +61,36 @@ export function listenLobby(cb) {
   }, (err) => console.warn('Error escuchando el lobby:', err.message));
 }
 
-// Presencia global de la app: quién la tiene abierta y en qué estado está.
-// Su onDisconnect no se cancela nunca: solo debe dispararse al cerrar la página.
-export function attachGlobalPresence(entry) {
+// Presencia global de la app: por pestaña (un usuario puede tener varias) y
+// agregada por usuario al mostrar. getEntry debe devolver el valor actual.
+export function attachGlobalPresence(getEntry) {
   if (!db) return;
-  const onlineRef = ref(db, `online/${getUserId()}`);
-  onDisconnect(onlineRef).remove();
-  set(onlineRef, entry);
+
+  const apply = () => {
+    const tabRef = ref(db, `online/${getUserId()}/${getTabId()}`);
+    onDisconnect(tabRef).remove();
+    set(tabRef, getEntry());
+  };
+  globalRegistrations.push(apply);
+  apply();
 }
 
 export function updateOnlineEntry(fields) {
   if (!db) return;
-  update(ref(db, `online/${getUserId()}`), fields);
+  update(ref(db, `online/${getUserId()}/${getTabId()}`), fields);
 }
 
 export function listenOnline(cb) {
   onValue(ref(db, 'online'), (snap) => {
-    const users = [];
-    snap.forEach((child) => users.push({ userId: child.key, ...child.val() }));
-    cb(users);
+    const raw = {};
+    snap.forEach((userSnap) => {
+      raw[userSnap.key] = {};
+      userSnap.forEach((tabSnap) => {
+        const val = tabSnap.val();
+        if (val && typeof val === 'object') raw[userSnap.key][tabSnap.key] = val;
+      });
+    });
+    cb(raw);
   }, (err) => console.warn('Error escuchando usuarios conectados:', err.message));
 }
 
@@ -92,16 +114,19 @@ export function joinSession(sessionId) {
   subscribeSession(sessionId);
 }
 
-// Presencia del jugador: un corte o refresco la pone en false sin sacarlo de
-// la partida; al reconectar vuelve a true
+// Presencia del jugador en la partida: un corte o refresco la pone en false
+// sin sacarlo de la partida; al reconectar vuelve a true
 export function attachPresence() {
   if (!db || !state.sessionId) return;
 
-  const presenceRef = ref(db, `presence/${state.sessionId}/${getUserId()}`);
-  const op = onDisconnect(presenceRef);
-  op.set(false);
-  armedDisconnects.push(op);
-  set(presenceRef, true);
+  const apply = () => {
+    if (!state.sessionId) return;
+    const presenceRef = ref(db, `presence/${state.sessionId}/${getUserId()}`);
+    onDisconnect(presenceRef).set(false);
+    set(presenceRef, true);
+  };
+  sessionRegistrations = [apply];
+  apply();
 }
 
 export function broadcast(data) {
@@ -170,10 +195,9 @@ function subscribeSession(sessionId) {
 function detachSession() {
   sessionUnsubs.forEach((unsub) => unsub());
   sessionUnsubs = [];
+  sessionRegistrations = [];
 }
 
 export function disconnect() {
   detachSession();
-  armedDisconnects.forEach((op) => op.cancel().catch(() => {}));
-  armedDisconnects = [];
 }

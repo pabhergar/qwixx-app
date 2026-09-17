@@ -2,6 +2,7 @@ import { state, resetTurn, closeBoardRows } from './model/state.js';
 import { saveSession } from './model/storage.js';
 import { broadcast, updateLobbyEntry } from './net/transport.js';
 import { computeScores, getGameOverReason } from './logic/scoring.js';
+import { shouldApplyDiceRoll, shouldApplyTurnChange } from './logic/rules.js';
 import { COLOR_NAMES_ES } from './constants.js';
 import { renderBoard, renderScores, renderDice } from './ui/board.js';
 import { renderTurnControls, renderPlayers, enterGameScreens } from './ui/hud.js';
@@ -24,22 +25,40 @@ export function enterGame() {
   enterGameScreens();
   renderGame();
 }
-
-export function flowDiceRolled(dice) {
+export function flowDiceRolled(dice, turn) {
+  if (!shouldApplyDiceRoll(state, turn)) return;
   resetTurn();
   state.turn.hasRolled = true;
   state.dice = dice;
   renderGame();
 }
 
-export function flowTurnChanged(nextPlayer, closedRows = []) {
+export function flowTurnChanged(nextPlayer, closedRows = [], turn) {
+  if (!shouldApplyTurnChange(state, turn)) return;
   state.activePlayerId = nextPlayer;
   closeBoardRows(closedRows);
   resetTurn();
   state.validatedPlayers.clear();
   state.declaredClosures.clear();
+  if (turn !== undefined && turn !== null) state.turnCounter = turn;
   saveSession();
   renderGame();
+}
+
+export function flowPlayerLeft(data) {
+  // Puede llegar duplicado (salida explícita + reconnect): si el jugador
+  // ya no está en la lista, no hay nada que hacer
+  if (!state.playersList.some((p) => p.id === data.playerId)) return;
+
+  state.playersList = state.playersList.filter((p) => p.id !== data.playerId);
+  state.activePlayerId = state.activePlayerId === data.playerId
+    ? (state.playersList[0] || {}).id
+    : state.activePlayerId;
+
+  if (state.isHost) updateLobbyEntry({ playerCount: state.playersList.length });
+  if (state.gameStarted) renderGame();
+  else renderPlayers();
+  saveSession();
 }
 
 export function flowClosureAlert(alert) {

@@ -45,18 +45,20 @@ jugadores de una partida. La lógica de autoridad sigue en el host.
 ## Modelo de datos
 
 ```
-lobby/{sesionId}              { hostName, status: lobby|started|finished, createdAt, playerCount }
-events/{sesionId}/{eventoId}  { sender: idDePágina, payload: { type, ... } }
-presence/{sesionId}/{playerId}
+lobby/{sesionId}              { hostName, hostUserId, status: lobby|started|finished, createdAt, playerCount }
+events/{sesionId}/{eventoId}  { sender: userId, createdAt, payload: { type, ... } }
+presence/{sesionId}/{userId}  true | false
 ```
 
 - `lobby` — listado "Partidas disponibles" (listener en vivo en todos los clientes).
-- `events` — bus de mensajes de la partida (HANDSHAKE, WELCOME, DICE_ROLLED,
-  TURN_CHANGED, GAME_OVER...). Cada cliente ignora los eventos que él mismo envió.
-- `presence` — presencia por jugador con `onDisconnect`: si alguien cierra la
-  pestaña o pierde la conexión, se emite su `PLAYER_LEFT` automáticamente. Si
-  quien se desconecta es el host, la partida entera se limpia y el resto vuelve
-  al listado.
+- `events` — bus de mensajes de la partida (HANDSHAKE, WELCOME, REJOIN, DICE_ROLLED,
+  TURN_CHANGED, GAME_OVER...). Cada cliente ignora los eventos que él mismo envió,
+  y al (re)conectar filtra el historial previo salvo los eventos marcados con
+  número de turno (necesarios para recuperar lo ocurrido durante un corte).
+- `presence` — presencia por jugador con `onDisconnect`: un refresco o microcorte
+  pone el valor en `false` sin sacarlo de la partida (los demás ven "sin conexión"
+  y el juego espera); al reconectar vuelve a `true` con el estado restaurado. Si
+  el anfitrión no vuelve en ~90s, cualquier cliente limpia la partida (watchdog).
 
 ## Notas
 

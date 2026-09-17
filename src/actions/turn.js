@@ -24,9 +24,9 @@ export function rollDice() {
     g: Math.floor(Math.random() * 6) + 1, b: Math.floor(Math.random() * 6) + 1
   };
 
-  flowDiceRolled(dice);
+  flowDiceRolled(dice, state.turnCounter);
   saveSession();
-  broadcast({ type: 'DICE_ROLLED', dice });
+  broadcast({ type: 'DICE_ROLLED', dice, turn: state.turnCounter });
 }
 
 export function handleCellClick(cell) {
@@ -121,13 +121,14 @@ export async function validateTurn() {
   const pendingClosedRows = Array.from(state.turn.pendingClosedRows);
 
   if (state.isHost) {
-    processValidation(state.myPlayerId, state.myPlayerName, pendingClosedRows);
+    processValidation(state.myPlayerId, state.myPlayerName, pendingClosedRows, state.turnCounter);
   } else {
     broadcast({
       type: 'PLAYER_VALIDATED',
       playerId: state.myPlayerId,
       playerName: state.myPlayerName,
-      pendingClosedRows
+      pendingClosedRows,
+      turn: state.turnCounter
     });
   }
 }

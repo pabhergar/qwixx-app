@@ -100,3 +100,18 @@ export function isMarkedInTurn(st, color, val) {
 export function isLockedClosureCell(st, color, val) {
   return st.turn.myLockedClosures.has(color) && (val === LOCK_VAL || isRowClosingCell(color, val));
 }
+
+// Guards de eventos con número de turno: hacen idempotentes los replays y
+// permiten aplicar eventos que ocurrieron mientras se estuvo desconectado.
+
+export function shouldApplyDiceRoll(st, turn) {
+  if (turn === undefined || turn === null) return true;
+  if (turn < st.turnCounter) return false;
+  if (turn === st.turnCounter && st.turn.hasRolled) return false;
+  return true;
+}
+
+export function shouldApplyTurnChange(st, turn) {
+  if (turn === undefined || turn === null) return true;
+  return turn > st.turnCounter;
+}

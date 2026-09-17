@@ -1,6 +1,12 @@
+import { state } from './model/state.js';
+import { getUserId } from './model/identity.js';
 import { initTransport } from './net/transport.js';
 import { initNetworkMessaging } from './net/messages.js';
-import { initLobbyListener, createGame, joinGame, startGame, leaveSession, exitGame } from './actions/session.js';
+import { initPresenceHandling } from './net/presence.js';
+import { kickPlayer } from './net/host.js';
+import {
+  initLobbyListener, tryReconnect, createGame, joinGame, startGame, leaveSession, exitGame
+} from './actions/session.js';
 import { rollDice, handleCellClick, validateTurn } from './actions/turn.js';
 import { toggleWaitPanel, hideWaitPanel } from './ui/hud.js';
 
@@ -8,11 +14,14 @@ import { toggleWaitPanel, hideWaitPanel } from './ui/hud.js';
 // model/ y net/.
 
 window.addEventListener('DOMContentLoaded', () => {
+  state.userId = getUserId();
+
   const savedName = localStorage.getItem('qwixx_player_name');
   if (savedName) document.getElementById('player-name-input').value = savedName;
 
   initTransport();
   initNetworkMessaging();
+  initPresenceHandling();
   initLobbyListener();
 
   document.getElementById('btn-create-room').addEventListener('click', createGame);
@@ -30,8 +39,18 @@ window.addEventListener('DOMContentLoaded', () => {
     if (btn) joinGame(btn.dataset.sessionId);
   });
 
+  const onKick = (e) => {
+    const btn = e.target.closest('.player-kick');
+    if (btn) kickPlayer(btn.dataset.playerId);
+  };
+  document.getElementById('player-list').addEventListener('click', onKick);
+  document.getElementById('turn-wait-list').addEventListener('click', onKick);
+
   document.getElementById('game-area').addEventListener('click', (e) => {
     const cell = e.target.closest('.cell');
     if (cell) handleCellClick(cell);
   });
+
+  // Refresco o microcorte con una partida en marcha: reincorporación
+  tryReconnect();
 });

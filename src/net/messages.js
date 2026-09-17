@@ -1,32 +1,34 @@
-import { state } from '../model/state.js';
+import { state, resetTurn } from '../model/state.js';
 import { saveSession } from '../model/storage.js';
 import * as transport from './transport.js';
 import * as host from './host.js';
 import {
-  enterGame, flowDiceRolled, flowTurnChanged, flowClosureAlert, checkGameOverLocal, submitMyScore, renderGame
+  enterGame, flowDiceRolled, flowTurnChanged, flowClosureAlert, flowPlayerLeft,
+  checkGameOverLocal, submitMyScore, renderGame
 } from '../flow.js';
-import { renderPlayers } from '../ui/hud.js';
+import { renderPlayers, showSessionAsClient } from '../ui/hud.js';
 import { showAlert, showGameOverModal, updateLeaderboard } from '../ui/modals.js';
 import { resetToStart } from '../actions/session.js';
 
 // Routing de mensajes de red: traduce payloads a transiciones de flow.js.
 
+// Mensajes procesables antes de estar dentro de la partida: los de registro
+// de sala (WELCOME/PLAYER_JOINED/PLAYER_LEFT) y REJECTED. El resto del
+// historial se ignora hasta entrar (salvo durante una reconexión).
+const PRE_JOIN_MESSAGE_TYPES = new Set(['REJECTED', 'WELCOME', 'PLAYER_JOINED', 'PLAYER_LEFT']);
+
 export function initNetworkMessaging() {
   transport.onPayload(routePayload);
 }
 
-// Mensajes procesables antes de estar dentro de la partida: los de registro
-// de sala (WELCOME/PLAYER_JOINED/PLAYER_LEFT) y REJECTED. El resto del
-// historial de eventos (dados, turnos, etc.) se ignora hasta entrar.
-const PRE_JOIN_MESSAGE_TYPES = new Set(['REJECTED', 'WELCOME', 'PLAYER_JOINED', 'PLAYER_LEFT']);
-
 function routePayload(data) {
-  if (!state.sessionJoined && !PRE_JOIN_MESSAGE_TYPES.has(data.type)) return;
+  if (!state.sessionJoined && !state.reconnecting && !PRE_JOIN_MESSAGE_TYPES.has(data.type)) return;
 
   if (state.isHost) {
     if (data.type === 'HANDSHAKE') return host.handleHandshake(data);
+    if (data.type === 'REJOIN') return host.handleRejoin(data);
     if (data.type === 'PLAYER_VALIDATED') {
-      return host.processValidation(data.playerId, data.playerName, data.pendingClosedRows);
+      return host.processValidation(data.playerId, data.playerName, data.pendingClosedRows, data.turn);
     }
   }
   handleNetworkData(data);
@@ -35,21 +37,14 @@ function routePayload(data) {
 function handleNetworkData(data) {
   switch (data.type) {
     case 'REJECTED':
-      if (data.targetSession === transport.getSessionId()) {
+      if (data.targetUserId === state.userId) {
+        state.reconnecting = false;
         resetToStart(data.reason, 'Conexión rechazada');
       }
       break;
 
     case 'WELCOME':
-      if (data.targetSession === transport.getSessionId() || data.targetName === state.myPlayerName) {
-        state.myPlayerId = data.playerId;
-        state.playersList = data.players;
-        state.activePlayerId = data.activePlayerId;
-        state.sessionJoined = true;
-        transport.attachPresence(data.playerId);
-        renderPlayers();
-        saveSession();
-      }
+      if (data.targetUserId === state.userId) applyWelcome(data);
       break;
 
     case 'PLAYER_JOINED':
@@ -58,32 +53,20 @@ function handleNetworkData(data) {
       saveSession();
       break;
 
-    case 'PLAYER_LEFT': {
-      // Puede llegar duplicado (salida explícita + onDisconnect): si el jugador
-      // ya no está en la lista, no hay nada que hacer
-      if (!state.playersList.some((p) => p.id === data.playerId)) break;
-
-      state.playersList = state.playersList.filter((p) => p.id !== data.playerId);
-      state.activePlayerId = state.activePlayerId === data.playerId
-        ? (state.playersList[0] || {}).id
-        : state.activePlayerId;
-
+    case 'PLAYER_LEFT':
       showAlert(`⚠️ ${data.playerName} ha abandonado la partida.`, 'Jugador Desconectado');
-      if (state.isHost) transport.updateLobbyEntry({ playerCount: state.playersList.length });
-      if (state.gameStarted) renderGame();
-      else renderPlayers();
-      saveSession();
+      flowPlayerLeft(data);
       break;
-    }
 
     case 'GAME_STARTED':
       state.playersList = data.players;
       state.activePlayerId = data.activePlayerId;
+      if (data.turn) state.turnCounter = data.turn;
       enterGame();
       break;
 
     case 'DICE_ROLLED':
-      flowDiceRolled(data.dice);
+      flowDiceRolled(data.dice, data.turn);
       break;
 
     case 'ROW_CLOSURE_ALERT':
@@ -96,7 +79,7 @@ function handleNetworkData(data) {
       break;
 
     case 'TURN_CHANGED':
-      flowTurnChanged(data.nextPlayer, data.closedRows);
+      flowTurnChanged(data.nextPlayer, data.closedRows, data.turn);
       checkGameOverLocal();
       break;
 
@@ -114,4 +97,36 @@ function handleNetworkData(data) {
       updateLeaderboard();
       break;
   }
+}
+
+// WELCOME (primera entrada o reconexión): snapshot autoritativo de la sala
+function applyWelcome(data) {
+  const savedTurnCounter = state.turnCounter;
+
+  state.myPlayerId = data.playerId;
+  state.playersList = data.players;
+  state.activePlayerId = data.activePlayerId;
+  state.turnCounter = data.turn ?? savedTurnCounter;
+  state.dice = data.dice || state.dice;
+  state.validatedPlayers = new Set(data.validatedList || []);
+
+  // El turno restaurado del localStorage solo sirve si seguimos en el mismo
+  // turno; si avanzó mientras estuvimos fuera, se descarta
+  if (savedTurnCounter < state.turnCounter) resetTurn();
+
+  state.turn.hasRolled = !!data.hasRolled;
+  state.turn.hasValidated = state.validatedPlayers.has(state.myPlayerId);
+
+  state.sessionJoined = true;
+  state.reconnecting = false;
+  transport.attachPresence();
+
+  if (data.gameStarted) {
+    enterGame();
+  } else {
+    const game = state.lobbyGames.find((g) => g.id === state.sessionId);
+    showSessionAsClient(game ? game.hostName : '...');
+    renderPlayers();
+  }
+  saveSession();
 }

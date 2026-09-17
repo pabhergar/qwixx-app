@@ -1,7 +1,15 @@
 import { state } from './state.js';
 
-// Nota: hoy en día esta persistencia es solo de escritura (nadie la lee al
-// arrancar); se mantiene para un futuro "reconectar a la partida".
+// Claves de sesión (se borran al salir a propósito); la identidad
+// (qwixx_user_id) y el nombre (qwixx_player_name) sobreviven siempre.
+const SESSION_KEYS = [
+  'qwixx_session_id',
+  'qwixx_is_host',
+  'qwixx_my_id',
+  'qwixx_game_started',
+  'qwixx_board',
+  'qwixx_host_state'
+];
 
 export function saveSession() {
   if (!state.sessionId) return;
@@ -23,9 +31,11 @@ export function saveSession() {
       closedRows: [...state.board.closedRows]
     },
     turn: {
-      hasRolled: state.turn.hasRolled,
-      hasMarked: state.turn.marked.length > 0
-    }
+      ...state.turn,
+      pendingClosedRows: [...state.turn.pendingClosedRows],
+      myLockedClosures: [...state.turn.myLockedClosures]
+    },
+    turnCounter: state.turnCounter
   }));
 
   if (state.isHost) {
@@ -34,15 +44,38 @@ export function saveSession() {
       activePlayerId: state.activePlayerId,
       gameStarted: state.gameStarted,
       dice: state.dice,
-      hasRolledInTurn: state.turn.hasRolled
+      hasRolledInTurn: state.turn.hasRolled,
+      turnCounter: state.turnCounter,
+      validatedPlayers: [...state.validatedPlayers],
+      declaredClosures: [...state.declaredClosures]
     }));
   }
 }
 
+// Datos para reconectar tras un refresco o microcorte
+export function loadSavedSession() {
+  try {
+    const sessionId = localStorage.getItem('qwixx_session_id');
+    if (!sessionId) return null;
+
+    const saved = JSON.parse(localStorage.getItem('qwixx_board') || 'null');
+    return {
+      sessionId,
+      isHost: localStorage.getItem('qwixx_is_host') === 'true',
+      myPlayerId: localStorage.getItem('qwixx_my_id') || 'P1',
+      name: localStorage.getItem('qwixx_player_name') || '',
+      gameStarted: localStorage.getItem('qwixx_game_started') === 'true',
+      board: saved?.board || null,
+      turn: saved?.turn || null,
+      turnCounter: saved?.turnCounter || 0,
+      hostState: JSON.parse(localStorage.getItem('qwixx_host_state') || 'null')
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Salida manual: borra la sesión pero conserva identidad y nombre
 export function clearSession() {
-  // Conserva el nombre del jugador: se usa para pre-rellenar el input al
-  // volver al lobby; el resto de datos de sesión sí se borran
-  const name = localStorage.getItem('qwixx_player_name');
-  localStorage.clear();
-  if (name) localStorage.setItem('qwixx_player_name', name);
+  SESSION_KEYS.forEach((key) => localStorage.removeItem(key));
 }

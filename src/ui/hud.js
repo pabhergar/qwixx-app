@@ -5,12 +5,16 @@ import { isMyTurn, isForcedPenalty, hasNoWhiteOption } from '../logic/rules.js';
 export function renderTurnControls() {
   const activeName = activePlayerName();
   const myTurn = isMyTurn(state);
+  const activePlayer = state.playersList.find((p) => p.id === state.activePlayerId);
+  const activeOffline = !!activePlayer && state.presence[activePlayer.userId] === false;
 
   const diceMsg = document.getElementById('dice-status-msg');
   if (diceMsg) {
     if (!state.turn.hasRolled) {
       diceMsg.style.display = 'block';
-      diceMsg.innerText = myTurn ? '¡Tu turno! Lanza 🎲' : `Esperando a ${activeName}... ⏳`;
+      if (myTurn) diceMsg.innerText = '¡Tu turno! Lanza 🎲';
+      else if (activeOffline) diceMsg.innerText = `Esperando por ${activeName} (sin conexión)... 📴`;
+      else diceMsg.innerText = `Esperando a ${activeName}... ⏳`;
     } else {
       diceMsg.style.display = 'none';
       diceMsg.innerText = '';
@@ -68,9 +72,13 @@ export function renderPlayers() {
   state.playersList.forEach((p) => {
     const isValidated = state.validatedPlayers.has(p.id);
     const isCurrentTurn = (p.id === state.activePlayerId);
+    const offline = state.presence[p.userId] === false;
+    const canKick = state.isHost && offline && p.id !== state.myPlayerId;
 
     const li = document.createElement('li');
-    li.innerHTML = `<span>${isCurrentTurn ? '🎲 ' : ''}${escapeHtml(p.name)} ${p.id === 'P1' ? '👑' : ''}</span> <span>${isValidated ? '✔️' : '⏳'}</span>`;
+    li.innerHTML = `
+      <span class="${offline ? 'player-offline' : ''}">${isCurrentTurn ? '🎲 ' : ''}${escapeHtml(p.name)} ${p.id === 'P1' ? '👑' : ''}${offline ? ' 📴' : ''}</span>
+      <span>${isValidated ? '✔️' : '⏳'}${canKick ? ` <button class="player-kick" data-player-id="${p.id}" title="Expulsar (desconectado)">✖</button>` : ''}</span>`;
     ul.appendChild(li);
 
     if (waitUl) waitUl.appendChild(li.cloneNode(true));

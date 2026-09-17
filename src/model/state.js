@@ -28,20 +28,24 @@ export function createTurn() {
 
 export function createState() {
   return {
+    userId: '',
     sessionId: '',
     isHost: false,
     myPlayerId: 'P1',
     myPlayerName: '',
     gameStarted: false,
     gameOverTriggered: false,
+    reconnecting: false,
 
     lobbyGames: [],
     sessionJoined: false,
+    presence: {},
 
     playersList: [],
     activePlayerId: 'P1',
     validatedPlayers: new Set(),
     declaredClosures: new Set(),
+    turnCounter: 0,
 
     dice: { w1: 1, w2: 1, r: 1, y: 1, g: 1, b: 1 },
 
@@ -58,7 +62,7 @@ export function resetTurn() {
   state.turn = createTurn();
 }
 
-// Vuelve al estado "fuera de partida" (el nombre del jugador y el tablero se conservan)
+// Vuelve al estado "fuera de partida" (la identidad y el tablero se conservan)
 export function resetSessionState() {
   state.sessionId = '';
   state.isHost = false;
@@ -66,11 +70,50 @@ export function resetSessionState() {
   state.gameStarted = false;
   state.gameOverTriggered = false;
   state.sessionJoined = false;
+  state.reconnecting = false;
+  state.presence = {};
   state.playersList = [];
   state.activePlayerId = 'P1';
   state.validatedPlayers.clear();
   state.declaredClosures.clear();
+  state.turnCounter = 0;
   state.scores = {};
+}
+
+// Restauración tras un refresco o microcorte (fuente: localStorage)
+
+export function restoreBoard(boardData) {
+  if (!boardData) return;
+  COLORS.forEach((color) => {
+    state.board.marks[color] = new Set(boardData.marks?.[color] || []);
+  });
+  state.board.penalties = boardData.penalties || 0;
+  state.board.closedRows = new Set(boardData.closedRows || []);
+}
+
+export function restoreTurn(turnData) {
+  if (!turnData) return;
+  state.turn = {
+    hasRolled: !!turnData.hasRolled,
+    marked: turnData.marked || [],
+    hasMarkedWhite: !!turnData.hasMarkedWhite,
+    hasMarkedColor: !!turnData.hasMarkedColor,
+    hasValidated: !!turnData.hasValidated,
+    pendingClosedRows: new Set(turnData.pendingClosedRows || []),
+    myLockedClosures: new Set(turnData.myLockedClosures || [])
+  };
+}
+
+export function restoreHostState(hostState) {
+  if (!hostState) return;
+  state.playersList = hostState.playersList || [];
+  state.activePlayerId = hostState.activePlayerId || 'P1';
+  state.gameStarted = !!hostState.gameStarted;
+  state.dice = hostState.dice || state.dice;
+  state.turnCounter = hostState.turnCounter || 0;
+  state.turn.hasRolled = !!hostState.hasRolledInTurn;
+  state.validatedPlayers = new Set(hostState.validatedPlayers || []);
+  state.declaredClosures = new Set(hostState.declaredClosures || []);
 }
 
 export function addBoardMark(color, val) {

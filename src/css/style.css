@@ -123,10 +123,34 @@ body {
 h1.game-title { text-align: center; color: var(--text-strong); margin: 0 0 10px 0; font-size: 20px; }
 
 /* PRESENCIA GLOBAL: badge arriba a la derecha y su desplegable */
+.fullscreen-btn {
+    position: fixed;
+    top: 10px;
+    left: 12px;
+    top: max(10px, env(safe-area-inset-top));
+    left: max(12px, env(safe-area-inset-left));
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 15px;
+    color: var(--text);
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+.fullscreen-btn.active { background: #10b981; border-color: #10b981; color: #ffffff; }
+
 .online-badge {
     position: fixed;
     top: 10px;
     right: 12px;
+    top: max(10px, env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
     z-index: 300;
     display: flex;
     align-items: center;
@@ -147,6 +171,7 @@ h1.game-title { text-align: center; color: var(--text-strong); margin: 0 0 10px 
     position: fixed;
     top: 40px;
     right: 12px;
+    right: max(12px, env(safe-area-inset-right));
     z-index: 300;
     display: none;
     flex-direction: column;

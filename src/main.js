@@ -11,6 +11,7 @@ import {
 import { rollDice, handleCellClick, validateTurn } from './actions/turn.js';
 import { toggleWaitPanel, hideWaitPanel } from './ui/hud.js';
 import { toggleOnlinePopover, hideOnlinePopover } from './ui/online.js';
+import { initFullscreenButton } from './ui/fullscreen.js';
 
 // Bootstrap: wiring de eventos. Toda la lógica vive en actions/, flow/, logic/,
 // model/ y net/.
@@ -38,6 +39,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const nameInput = document.getElementById('player-name-input');
   nameInput.addEventListener('change', () => setOnlineName(nameInput.value.trim() || null));
+
+  initFullscreenButton();
 
   document.getElementById('btn-create-room').addEventListener('click', createGame);
   document.getElementById('btn-start-game').addEventListener('click', startGame);

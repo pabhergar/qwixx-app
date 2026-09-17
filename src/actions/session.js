@@ -8,6 +8,7 @@ import {
   renderPlayers, renderGamesList,
   showSessionAsHost, showSessionAsClient, showGameBrowser
 } from '../ui/hud.js';
+import { requestAutoFullscreen, exitFullscreen } from '../ui/fullscreen.js';
 import { showAlert, showConfirm } from '../ui/modals.js';
 
 // Acciones de sesión: crear/unirse desde el listado, reconectar tras un
@@ -53,9 +54,11 @@ export function createGame() {
   state.myPlayerId = 'P1';
   state.playersList = [{ id: 'P1', userId: state.userId, name }];
   state.sessionJoined = true;
+  state.sessionJoined = true;
   state.sessionId = transport.createSession(name);
   transport.attachPresence();
   setOnlineStatus('playing');
+  requestAutoFullscreen();
 
   showSessionAsHost(name);
   renderPlayers();
@@ -78,6 +81,7 @@ export function joinGame(sessionId) {
   showSessionAsClient(game.hostName);
   transport.broadcast({ type: 'HANDSHAKE', userId: state.userId, name });
   setOnlineStatus('playing');
+  requestAutoFullscreen();
 }
 
 export async function startGame() {
@@ -91,6 +95,7 @@ export async function startGame() {
   state.gameStarted = true;
   state.turnCounter = 1;
   saveSession();
+  requestAutoFullscreen();
   transport.updateLobbyEntry({ status: 'started' });
   transport.broadcast({
     type: 'GAME_STARTED',
@@ -167,6 +172,7 @@ export function leaveSession() {
   clearSession();
   resetSessionState();
   setOnlineStatus('lobby');
+  exitFullscreen();
   showGameBrowser();
 }
 

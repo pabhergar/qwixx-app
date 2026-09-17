@@ -28,7 +28,7 @@ jugadores de una partida. La lógica de autoridad sigue en el host.
      "rules": {
        "lobby":    { ".read": true,  ".write": true },
        "events":   { ".read": true,  ".write": true },
-       "presence": { ".read": false, ".write": true },
+       "presence": { ".read": true,  ".write": true },
        "online":   { ".read": true,  ".write": true }
      }
    }
@@ -61,6 +61,7 @@ online/{userId}               { name: string|null, status: lobby|playing, since 
   pone el valor en `false` sin sacarlo de la partida (los demás ven "sin conexión"
   y el juego espera); al reconectar vuelve a `true` con el estado restaurado. Si
   el anfitrión no vuelve en ~90s, cualquier cliente limpia la partida (watchdog).
+  Todos los jugadores de la sesión la leen en vivo (regla `.read: true`).
 - `online` — presencia global de la app (badge superior derecha), registrada por
   pestaña (`online/{userId}/{tabId}`) y agregada por usuario al mostrar: quién
   tiene la página abierta y si está disponible o en partida. Se re-escribe en

@@ -88,7 +88,7 @@ export function isForcedPenalty(st) {
 
 // Un jugador no activo sin opciones blancas (solo informativo, su pase es libre)
 export function hasNoWhiteOption(st) {
-  if (isMyTurn(st) || !st.turn.hasRolled || st.turn.marked.length > 0) return false;
+  if (isMyTurn(st) || !st.turn.hasRolled || st.turn.marked.length > 0 || st.turn.hasValidated) return false;
   return getValidTargets(st).white.size === 0;
 }
 

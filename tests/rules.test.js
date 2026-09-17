@@ -180,6 +180,17 @@ describe('isForcedPenalty / hasNoWhiteOption', () => {
     expect(isForcedPenalty(s)).toBe(false);
     expect(hasNoWhiteOption(s)).toBe(true);
   });
+
+  it('tras validar, el botón de validación deja de parpadear', () => {
+    const s = blockedBoardState();
+    s.myPlayerId = 'P2';
+    s.turn.hasValidated = true;
+    expect(hasNoWhiteOption(s)).toBe(false);
+
+    const s2 = blockedBoardState();
+    s2.turn.hasValidated = true;
+    expect(isForcedPenalty(s2)).toBe(false);
+  });
 });
 
 describe('deshacer marcas', () => {

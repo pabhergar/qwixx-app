@@ -40,5 +40,9 @@ export function saveSession() {
 }
 
 export function clearSession() {
+  // Conserva el nombre del jugador: se usa para pre-rellenar el input al
+  // volver al lobby; el resto de datos de sesión sí se borran
+  const name = localStorage.getItem('qwixx_player_name');
   localStorage.clear();
+  if (name) localStorage.setItem('qwixx_player_name', name);
 }

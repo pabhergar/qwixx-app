@@ -111,7 +111,7 @@ export function leaveSession() {
 // Salir con la partida en marcha
 export async function exitGame(force = false) {
   if (!force && !state.gameOverTriggered) {
-    const confirmed = await showConfirm('¿Seguro que quieres abandonar la partida y borrar los datos guardados?', 'Salir del Juego');
+    const confirmed = await showConfirm('¿Seguro que quieres abandonar la partida?', 'Salir del Juego');
     if (!confirmed) return;
   }
 

@@ -28,7 +28,8 @@ jugadores de una partida. La lógica de autoridad sigue en el host.
      "rules": {
        "lobby":    { ".read": true,  ".write": true },
        "events":   { ".read": true,  ".write": true },
-       "presence": { ".read": false, ".write": true }
+       "presence": { ".read": false, ".write": true },
+       "online":   { ".read": true,  ".write": true }
      }
    }
    ```
@@ -48,6 +49,7 @@ jugadores de una partida. La lógica de autoridad sigue en el host.
 lobby/{sesionId}              { hostName, hostUserId, status: lobby|started|finished, createdAt, playerCount }
 events/{sesionId}/{eventoId}  { sender: userId, createdAt, payload: { type, ... } }
 presence/{sesionId}/{userId}  true | false
+online/{userId}               { name: string|null, status: lobby|playing, since }
 ```
 
 - `lobby` — listado "Partidas disponibles" (listener en vivo en todos los clientes).
@@ -59,6 +61,9 @@ presence/{sesionId}/{userId}  true | false
   pone el valor en `false` sin sacarlo de la partida (los demás ven "sin conexión"
   y el juego espera); al reconectar vuelve a `true` con el estado restaurado. Si
   el anfitrión no vuelve en ~90s, cualquier cliente limpia la partida (watchdog).
+- `online` — presencia global de la app (badge superior derecha): quién tiene la
+  página abierta y si está disponible o en partida; se elimina sola vía
+  `onDisconnect` al cerrar la pestaña.
 
 ## Notas
 

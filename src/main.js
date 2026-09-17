@@ -3,12 +3,14 @@ import { getUserId } from './model/identity.js';
 import { initTransport } from './net/transport.js';
 import { initNetworkMessaging } from './net/messages.js';
 import { initPresenceHandling } from './net/presence.js';
+import { initOnlinePresence, setOnlineName } from './net/online.js';
 import { kickPlayer } from './net/host.js';
 import {
   initLobbyListener, tryReconnect, createGame, joinGame, startGame, leaveSession, exitGame
 } from './actions/session.js';
 import { rollDice, handleCellClick, validateTurn } from './actions/turn.js';
 import { toggleWaitPanel, hideWaitPanel } from './ui/hud.js';
+import { toggleOnlinePopover, hideOnlinePopover } from './ui/online.js';
 
 // Bootstrap: wiring de eventos. Toda la lógica vive en actions/, flow/, logic/,
 // model/ y net/.
@@ -23,6 +25,19 @@ window.addEventListener('DOMContentLoaded', () => {
   initNetworkMessaging();
   initPresenceHandling();
   initLobbyListener();
+  initOnlinePresence();
+
+  document.getElementById('online-badge').addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleOnlinePopover();
+  });
+  document.addEventListener('click', (e) => {
+    const popover = document.getElementById('online-popover');
+    if (popover && popover.style.display === 'flex' && !popover.contains(e.target)) hideOnlinePopover();
+  });
+
+  const nameInput = document.getElementById('player-name-input');
+  nameInput.addEventListener('change', () => setOnlineName(nameInput.value.trim() || null));
 
   document.getElementById('btn-create-room').addEventListener('click', createGame);
   document.getElementById('btn-start-game').addEventListener('click', startGame);

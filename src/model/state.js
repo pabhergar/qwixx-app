@@ -40,6 +40,7 @@ export function createState() {
     lobbyGames: [],
     sessionJoined: false,
     presence: {},
+    onlineUsers: [],
 
     playersList: [],
     activePlayerId: 'P1',

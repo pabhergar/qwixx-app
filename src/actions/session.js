@@ -3,6 +3,7 @@ import { saveSession, clearSession, loadSavedSession } from '../model/storage.js
 import * as transport from '../net/transport.js';
 import { enterGame, renderGame } from '../flow.js';
 import { clearPresenceWatchdog } from '../net/presence.js';
+import { setOnlineName, setOnlineStatus } from '../net/online.js';
 import {
   renderPlayers, renderGamesList,
   showSessionAsHost, showSessionAsClient, showGameBrowser
@@ -34,6 +35,7 @@ function getAndValidateName() {
     return null;
   }
   localStorage.setItem('qwixx_player_name', name);
+  setOnlineName(name);
   return name;
 }
 
@@ -53,6 +55,7 @@ export function createGame() {
   state.sessionJoined = true;
   state.sessionId = transport.createSession(name);
   transport.attachPresence();
+  setOnlineStatus('playing');
 
   showSessionAsHost(name);
   renderPlayers();
@@ -74,6 +77,7 @@ export function joinGame(sessionId) {
   transport.joinSession(sessionId);
   showSessionAsClient(game.hostName);
   transport.broadcast({ type: 'HANDSHAKE', userId: state.userId, name });
+  setOnlineStatus('playing');
 }
 
 export async function startGame() {
@@ -108,6 +112,7 @@ export function tryReconnect() {
   state.myPlayerId = saved.myPlayerId;
   state.myPlayerName = saved.name || state.myPlayerName;
   state.turnCounter = saved.turnCounter || 0;
+  setOnlineStatus('playing');
 
   restoreBoard(saved.board);
   restoreTurn(saved.turn);
@@ -161,6 +166,7 @@ export function leaveSession() {
   clearPresenceWatchdog();
   clearSession();
   resetSessionState();
+  setOnlineStatus('lobby');
   showGameBrowser();
 }
 

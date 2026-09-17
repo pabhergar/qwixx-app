@@ -50,6 +50,28 @@ export function listenLobby(cb) {
   }, (err) => console.warn('Error escuchando el lobby:', err.message));
 }
 
+// Presencia global de la app: quién la tiene abierta y en qué estado está.
+// Su onDisconnect no se cancela nunca: solo debe dispararse al cerrar la página.
+export function attachGlobalPresence(entry) {
+  if (!db) return;
+  const onlineRef = ref(db, `online/${getUserId()}`);
+  onDisconnect(onlineRef).remove();
+  set(onlineRef, entry);
+}
+
+export function updateOnlineEntry(fields) {
+  if (!db) return;
+  update(ref(db, `online/${getUserId()}`), fields);
+}
+
+export function listenOnline(cb) {
+  onValue(ref(db, 'online'), (snap) => {
+    const users = [];
+    snap.forEach((child) => users.push({ userId: child.key, ...child.val() }));
+    cb(users);
+  }, (err) => console.warn('Error escuchando usuarios conectados:', err.message));
+}
+
 export function createSession(hostName) {
   const sessionRef = push(ref(db, 'lobby'));
   const sessionId = sessionRef.key;

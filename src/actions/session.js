@@ -80,7 +80,9 @@ function hasOwnActiveGame() {
 export function createGame() {
   const name = getAndValidateName();
   if (!name) return;
-  if (hasOwnActiveGame()) return showAlert('Ya tienes una partida creada con tu usuario.');
+  if (hasOwnActiveGame()) {
+    return showAlert('Ya tienes una partida creada con este usuario. Elimínala desde el listado (🗑) para crear otra.', 'Partida duplicada');
+  }
 
   state.myPlayerName = name;
   state.isHost = true;
@@ -196,6 +198,18 @@ export function tryReconnect() {
 function sessionHostName(sessionId) {
   const game = state.lobbyGames.find((g) => g.id === sessionId);
   return game ? game.hostName : '...';
+}
+
+// El dueño puede eliminar su propia partida desde el listado (p. ej. una
+// partida vieja "en gris" que le bloquea la creación de otra nueva)
+export async function deleteOwnGame(sessionId) {
+  const game = state.lobbyGames.find((g) => g.id === sessionId);
+  if (!game || game.hostUserId !== state.userId) return;
+
+  const confirmed = await showConfirm(`¿Eliminar tu partida "${game.hostName}"? No se podrá recuperar.`, 'Eliminar partida');
+  if (!confirmed) return;
+
+  transport.removeSessionById(sessionId);
 }
 
 // Salir de la sala antes de empezar la partida (vuelve al listado sin recargar)

@@ -225,6 +225,8 @@ h1.game-title { text-align: center; color: var(--text-strong); margin: 0 0 10px 
 .game-item .game-meta { color: var(--text-muted); font-size: 12px; font-weight: normal; }
 .game-item.grayed { opacity: 0.6; }
 .game-item.grayed .game-info b { color: var(--text-muted); }
+.game-delete { background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 6px; cursor: pointer; font-size: 13px; padding: 6px 10px; flex-shrink: 0; }
+.game-delete:hover { background: #ef4444; border-color: #ef4444; color: #ffffff; }
 .net-btn.join { background: #10b981; padding: 6px 14px; font-size: 13px; flex-shrink: 0; }
 .no-games-placeholder { color: var(--text-faint); font-size: 13px; padding: 16px; border: 1px dashed var(--border); border-radius: 6px; margin-top: 8px; text-align: center; }
 

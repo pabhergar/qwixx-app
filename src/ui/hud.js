@@ -100,13 +100,18 @@ export function renderGamesList() {
   available.forEach((g) => {
     const count = g.playerCount || 1;
     const hostAway = g.hostOnline === false;
+    const isMine = g.hostUserId === state.userId;
     const li = document.createElement('li');
     li.className = `game-item${hostAway ? ' grayed' : ''}`;
     li.innerHTML = `
       <span class="game-info"><b>Partida de ${escapeHtml(g.hostName)}</b>
         <span class="game-meta">${hostAway ? '⏳ Esperando al anfitrión' : `${count} jugador${count === 1 ? '' : 'es'}`}</span>
       </span>
-      ${hostAway ? '' : `<button class="net-btn join" data-session-id="${g.id}">Unirse</button>`}`;
+      ${isMine
+        ? `<button class="game-delete" data-delete-id="${g.id}" title="Eliminar mi partida">🗑</button>`
+        : hostAway
+          ? ''
+          : `<button class="net-btn join" data-session-id="${g.id}">Unirse</button>`}`;
     ul.appendChild(li);
   });
 }

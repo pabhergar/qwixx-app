@@ -165,19 +165,23 @@ export function updateLobbyEntry(fields) {
   update(ref(db, `lobby/${state.sessionId}`), fields);
 }
 
-// Elimina la partida completa (host al salir, o watchdog si el host no vuelve).
-// Se cancela antes el onDisconnect de hostOnline, o reaparecería un huérfano
-// { hostOnline: false } al caer la conexión.
+// Elimina una partida completa por su id (host al salir, o el dueño desde el
+// listado). Se cancela antes el onDisconnect de hostOnline, o reaparecería un
+// huérfano { hostOnline: false } al caer la conexión.
 export function removeSession() {
-  if (!db || !state.sessionId) return;
-  if (hostOnlineOp) {
+  removeSessionById(state.sessionId);
+}
+
+export function removeSessionById(sessionId) {
+  if (!db || !sessionId) return;
+  if (hostOnlineOp && sessionId === state.sessionId) {
     hostOnlineOp.cancel().catch(() => {});
     hostOnlineOp = null;
   }
   update(ref(db), {
-    [`lobby/${state.sessionId}`]: null,
-    [`events/${state.sessionId}`]: null,
-    [`presence/${state.sessionId}`]: null
+    [`lobby/${sessionId}`]: null,
+    [`events/${sessionId}`]: null,
+    [`presence/${sessionId}`]: null
   });
 }
 

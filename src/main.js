@@ -6,7 +6,7 @@ import { initPresenceHandling } from './net/presence.js';
 import { initOnlinePresence, setOnlineName } from './net/online.js';
 import { kickPlayer } from './net/host.js';
 import {
-  initLobbyListener, tryReconnect, createGame, joinGame, startGame, leaveSession, exitGame
+  initLobbyListener, tryReconnect, createGame, joinGame, startGame, leaveSession, exitGame, deleteOwnGame
 } from './actions/session.js';
 import { rollDice, handleCellClick, validateTurn } from './actions/turn.js';
 import { toggleWaitPanel, hideWaitPanel } from './ui/hud.js';
@@ -53,6 +53,8 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-return-actions').addEventListener('click', hideWaitPanel);
 
   document.getElementById('games-list').addEventListener('click', (e) => {
+    const del = e.target.closest('button[data-delete-id]');
+    if (del) return deleteOwnGame(del.dataset.deleteId);
     const btn = e.target.closest('button[data-session-id]');
     if (btn) joinGame(btn.dataset.sessionId);
   });

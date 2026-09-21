@@ -16,14 +16,45 @@ import { showAlert, showConfirm } from '../ui/modals.js';
 
 const RECONNECT_TIMEOUT_MS = 100000;
 
+let lobbyLoaded = false;
+let lobbyLoadedCallbacks = [];
+
 export function initLobbyListener() {
   transport.listenLobby((games) => {
     state.lobbyGames = games;
+    sweepOrphanLobbyEntries(games);
     renderGamesList();
+
+    if (!lobbyLoaded) {
+      lobbyLoaded = true;
+      const callbacks = lobbyLoadedCallbacks;
+      lobbyLoadedCallbacks = [];
+      callbacks.forEach((cb) => cb());
+    }
   });
 
   transport.onSessionStatus((status) => {
     if (status === null && state.sessionId) handleSessionEnded();
+  });
+}
+
+// Espera al primer snapshot del lobby (con tope) antes de decidir una reconexión
+function whenLobbyReady(cb) {
+  if (lobbyLoaded) return cb();
+  lobbyLoadedCallbacks.push(cb);
+  setTimeout(() => {
+    const index = lobbyLoadedCallbacks.indexOf(cb);
+    if (index !== -1) {
+      lobbyLoadedCallbacks.splice(index, 1);
+      cb();
+    }
+  }, 2500);
+}
+
+// Entradas sin status (restos de onDisconnect tras un removeSession): se limpian
+function sweepOrphanLobbyEntries(games) {
+  games.forEach((g) => {
+    if (!g.status) transport.removeLobbyEntry(g.id);
   });
 }
 
@@ -41,7 +72,9 @@ function getAndValidateName() {
 }
 
 function hasOwnActiveGame() {
-  return state.lobbyGames.some((g) => g.hostUserId === state.userId && g.status !== 'finished');
+  return state.lobbyGames.some((g) =>
+    g.hostUserId === state.userId && (g.status === 'lobby' || g.status === 'started')
+  );
 }
 
 export function createGame() {
@@ -53,7 +86,6 @@ export function createGame() {
   state.isHost = true;
   state.myPlayerId = 'P1';
   state.playersList = [{ id: 'P1', userId: state.userId, name }];
-  state.sessionJoined = true;
   state.sessionJoined = true;
   state.sessionId = transport.createSession(name);
   transport.attachPresence();
@@ -107,46 +139,56 @@ export async function startGame() {
   enterGame();
 }
 
-// Reconexión tras refresco o microcorte: el estado local se restaura del
-// localStorage y el host confirma con un WELCOME
+// Reconexión tras refresco o microcorte: se valida que la partida siga viva
+// (contra el listado en vivo) antes de tocar las vistas; si está muerta, se
+// limpian las claves y el usuario se queda en el listado sin ruido.
 export function tryReconnect() {
   const saved = loadSavedSession();
   if (!saved || !state.userId) return false;
 
-  state.sessionId = saved.sessionId;
-  state.isHost = saved.isHost;
-  state.myPlayerId = saved.myPlayerId;
-  state.myPlayerName = saved.name || state.myPlayerName;
-  state.turnCounter = saved.turnCounter || 0;
-  setOnlineStatus('playing');
+  whenLobbyReady(() => {
+    const game = state.lobbyGames.find((g) => g.id === saved.sessionId);
+    const alive = !!game && (game.status === 'lobby' || game.status === 'started');
+    if (!alive) {
+      clearSession();
+      return;
+    }
 
-  restoreBoard(saved.board);
-  restoreTurn(saved.turn);
+    state.sessionId = saved.sessionId;
+    state.isHost = saved.isHost;
+    state.myPlayerId = saved.myPlayerId;
+    state.myPlayerName = saved.name || state.myPlayerName;
+    state.turnCounter = saved.turnCounter || 0;
+    setOnlineStatus('playing');
 
-  if (saved.isHost) {
-    restoreHostState(saved.hostState);
-    state.sessionJoined = true;
-    transport.joinSession(saved.sessionId);
-    transport.attachPresence();
-    transport.armHostOnline(saved.sessionId);
-    if (state.gameStarted) enterGame();
-    else showSessionAsHost(state.myPlayerName);
-    renderGame();
-    saveSession();
-  } else {
-    state.reconnecting = true;
-    transport.joinSession(saved.sessionId);
-    if (saved.gameStarted) enterGame();
-    else showSessionAsClient(sessionHostName(saved.sessionId));
-    renderGame();
-    transport.broadcast({ type: 'REJOIN', userId: state.userId, name: state.myPlayerName });
-    setTimeout(() => {
-      if (state.reconnecting) {
-        state.reconnecting = false;
-        resetToStart('No se pudo recuperar la partida.');
-      }
-    }, RECONNECT_TIMEOUT_MS);
-  }
+    restoreBoard(saved.board);
+    restoreTurn(saved.turn);
+
+    if (saved.isHost) {
+      restoreHostState(saved.hostState);
+      state.sessionJoined = true;
+      transport.joinSession(saved.sessionId);
+      transport.attachPresence();
+      transport.armHostOnline(saved.sessionId);
+      if (state.gameStarted) enterGame();
+      else showSessionAsHost(state.myPlayerName);
+      renderGame();
+      saveSession();
+    } else {
+      state.reconnecting = true;
+      transport.joinSession(saved.sessionId);
+      if (saved.gameStarted) enterGame();
+      else showSessionAsClient(sessionHostName(saved.sessionId));
+      renderGame();
+      transport.broadcast({ type: 'REJOIN', userId: state.userId, name: state.myPlayerName });
+      setTimeout(() => {
+        if (state.reconnecting) {
+          state.reconnecting = false;
+          resetToStart('No se pudo recuperar la partida.');
+        }
+      }, RECONNECT_TIMEOUT_MS);
+    }
+  });
 
   return true;
 }
@@ -161,8 +203,8 @@ export function leaveSession() {
   if (!state.sessionId) return;
 
   if (state.isHost) {
-    transport.disconnect();
     transport.removeSession();
+    transport.disconnect();
   } else if (state.playersList.some((p) => p.id === state.myPlayerId)) {
     transport.broadcast({ type: 'PLAYER_LEFT', playerId: state.myPlayerId, playerName: state.myPlayerName });
     transport.disconnect();
@@ -186,8 +228,8 @@ export async function exitGame(force = false) {
   }
 
   if (state.isHost) {
-    transport.disconnect();
     transport.removeSession();
+    transport.disconnect();
   } else {
     if (state.sessionJoined && !state.gameOverTriggered) {
       transport.broadcast({ type: 'PLAYER_LEFT', playerId: state.myPlayerId, playerName: state.myPlayerName });

@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import {
-  getDatabase, ref, push, set, update, onValue, onChildAdded, onDisconnect, serverTimestamp
+  getDatabase, ref, push, set, update, remove, onValue, onChildAdded, onDisconnect, serverTimestamp
 } from 'firebase/database';
 import { firebaseConfig } from './firebase-config.js';
 import { state } from '../model/state.js';
@@ -26,6 +26,7 @@ let sessionUnsubs = [];
 let globalRegistrations = [];
 let sessionPresenceApply = null;
 let hostOnlineApply = null;
+let hostOnlineOp = null;
 
 export function initTransport() {
   const app = initializeApp(firebaseConfig);
@@ -123,13 +124,12 @@ export function armHostOnline(sessionId) {
   const sid = sessionId || state.sessionId;
   if (!sid) return;
 
-  const apply = () => {
-    const flagRef = ref(db, `lobby/${sid}/hostOnline`);
-    onDisconnect(flagRef).set(false);
-    set(flagRef, true);
-  };
-  hostOnlineApply = apply;
-  apply();
+  const flagRef = ref(db, `lobby/${sid}/hostOnline`);
+  hostOnlineOp = onDisconnect(flagRef);
+  hostOnlineOp.set(false);
+  set(flagRef, true);
+
+  hostOnlineApply = () => armHostOnline(sid);
 }
 
 export function joinSession(sessionId) {
@@ -165,14 +165,27 @@ export function updateLobbyEntry(fields) {
   update(ref(db, `lobby/${state.sessionId}`), fields);
 }
 
-// Elimina la partida completa (host al salir, o watchdog si el host no vuelve)
+// Elimina la partida completa (host al salir, o watchdog si el host no vuelve).
+// Se cancela antes el onDisconnect de hostOnline, o reaparecería un huérfano
+// { hostOnline: false } al caer la conexión.
 export function removeSession() {
   if (!db || !state.sessionId) return;
+  if (hostOnlineOp) {
+    hostOnlineOp.cancel().catch(() => {});
+    hostOnlineOp = null;
+  }
   update(ref(db), {
     [`lobby/${state.sessionId}`]: null,
     [`events/${state.sessionId}`]: null,
     [`presence/${state.sessionId}`]: null
   });
+}
+
+// Limpieza de entradas huérfanas del lobby (sin status): cualquier cliente
+// puede eliminarlas, la escritura es idempotente
+export function removeLobbyEntry(sessionId) {
+  if (!db || !sessionId) return;
+  remove(ref(db, `lobby/${sessionId}`));
 }
 
 function subscribeSession(sessionId) {
@@ -219,6 +232,7 @@ function detachSession() {
   sessionUnsubs = [];
   sessionPresenceApply = null;
   hostOnlineApply = null;
+  hostOnlineOp = null;
 }
 
 export function disconnect() {

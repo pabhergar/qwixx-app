@@ -55,11 +55,15 @@ export function onPresence(fn) {
   presenceHandler = fn;
 }
 
-// Listado en vivo de partidas para todos los clientes conectados
+// Listado en vivo de partidas para todos los clientes conectados.
+// Ojo: DataSnapshot.forEach cancela la iteración si el callback devuelve true;
+// el cuerpo debe ir entre llaves para no devolver el resultado de push().
 export function listenLobby(cb) {
   onValue(ref(db, 'lobby'), (snap) => {
     const games = [];
-    snap.forEach((child) => games.push({ id: child.key, ...child.val() }));
+    snap.forEach((child) => {
+      games.push({ id: child.key, ...child.val() });
+    });
     cb(games);
   }, (err) => console.warn('Error escuchando el lobby:', err.message));
 }
@@ -196,7 +200,10 @@ function subscribeSession(sessionId) {
   detachSession();
 
   // Barrera temporal: al (re)conectar, el historial previo se ignora salvo
-  // los tipos exentos, que llegan protegidos por su número de turno
+  // los tipos exentos, que llegan protegidos por su número de turno.
+  // Ojo: el listener de serverTimeOffset puede dispararse de forma síncrona
+  // (conexión ya establecida), así que su baja no puede referirse a una const
+  // aún no inicializada (TDZ): se usa let con guarda.
   let barrier = null;
   const pending = [];
 
@@ -208,12 +215,13 @@ function subscribeSession(sessionId) {
     if (payloadHandler) payloadHandler(evt.payload);
   };
 
-  const offOffset = onValue(ref(db, '.info/serverTimeOffset'), (snap) => {
+  let offOffset = null;
+  offOffset = onValue(ref(db, '.info/serverTimeOffset'), (snap) => {
     barrier = Date.now() + (snap.val() || 0) - BARRIER_GRACE_MS;
-    offOffset();
+    if (offOffset) offOffset();
     pending.splice(0).forEach(routeEvent);
   });
-  sessionUnsubs.push(offOffset);
+  sessionUnsubs.push(() => { if (offOffset) offOffset(); });
 
   sessionUnsubs.push(onChildAdded(ref(db, `events/${sessionId}`), (snap) => {
     const evt = snap.val();

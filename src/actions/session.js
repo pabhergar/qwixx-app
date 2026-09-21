@@ -72,6 +72,7 @@ export function joinGame(sessionId) {
 
   const game = state.lobbyGames.find((g) => g.id === sessionId);
   if (!game || game.status !== 'lobby') return showAlert('Esa partida ya no está disponible.');
+  if (game.hostOnline === false) return showAlert('El anfitrión no está conectado. Podrás unirte cuando vuelva.');
 
   state.myPlayerName = name;
   state.sessionId = sessionId;
@@ -127,6 +128,7 @@ export function tryReconnect() {
     state.sessionJoined = true;
     transport.joinSession(saved.sessionId);
     transport.attachPresence();
+    transport.armHostOnline(saved.sessionId);
     if (state.gameStarted) enterGame();
     else showSessionAsHost(state.myPlayerName);
     renderGame();

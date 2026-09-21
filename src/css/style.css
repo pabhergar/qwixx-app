@@ -223,6 +223,8 @@ h1.game-title { text-align: center; color: var(--text-strong); margin: 0 0 10px 
 .game-item { background: var(--surface-2); padding: 8px 12px; border-radius: 6px; font-size: 13px; color: var(--text); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .game-item .game-info { display: flex; flex-direction: column; gap: 2px; font-weight: 600; }
 .game-item .game-meta { color: var(--text-muted); font-size: 12px; font-weight: normal; }
+.game-item.grayed { opacity: 0.6; }
+.game-item.grayed .game-info b { color: var(--text-muted); }
 .net-btn.join { background: #10b981; padding: 6px 14px; font-size: 13px; flex-shrink: 0; }
 .no-games-placeholder { color: var(--text-faint); font-size: 13px; padding: 16px; border: 1px dashed var(--border); border-radius: 6px; margin-top: 8px; text-align: center; }
 

@@ -46,11 +46,15 @@ jugadores de una partida. La lógica de autoridad sigue en el host.
 ## Modelo de datos
 
 ```
-lobby/{sesionId}              { hostName, hostUserId, status: lobby|started|finished, createdAt, playerCount }
+lobby/{sesionId}              { hostName, hostUserId, status: lobby|started|finished, hostOnline, createdAt, playerCount }
 events/{sesionId}/{eventoId}  { sender: userId, createdAt, payload: { type, ... } }
 presence/{sesionId}/{userId}  true | false
-online/{userId}               { name: string|null, status: lobby|playing, since }
+online/{userId}/{tabId}       { name: string|null, status: lobby|playing, since }
 ```
+
+- `lobby` — listado "Partidas disponibles" (listener en vivo en todos los clientes).
+  `hostOnline` indica si el anfitrión está conectado: si se desconecta, la partida
+  se muestra en gris ("Esperando al anfitrión") en vez de desaparecer.
 
 - `lobby` — listado "Partidas disponibles" (listener en vivo en todos los clientes).
 - `events` — bus de mensajes de la partida (HANDSHAKE, WELCOME, REJOIN, DICE_ROLLED,

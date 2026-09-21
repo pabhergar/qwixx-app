@@ -24,7 +24,8 @@ let statusHandler = null;
 let presenceHandler = null;
 let sessionUnsubs = [];
 let globalRegistrations = [];
-let sessionRegistrations = [];
+let sessionPresenceApply = null;
+let hostOnlineApply = null;
 
 export function initTransport() {
   const app = initializeApp(firebaseConfig);
@@ -36,7 +37,8 @@ export function initTransport() {
   onValue(ref(db, '.info/connected'), (snap) => {
     if (snap.val() !== true) return;
     globalRegistrations.forEach((apply) => apply());
-    sessionRegistrations.forEach((apply) => apply());
+    if (sessionPresenceApply) sessionPresenceApply();
+    if (hostOnlineApply) hostOnlineApply();
   });
 }
 
@@ -102,12 +104,32 @@ export function createSession(hostName) {
     hostName,
     hostUserId: getUserId(),
     status: 'lobby',
+    hostOnline: true,
     createdAt: Date.now(),
     playerCount: 1
   });
 
+  armHostOnline(sessionId);
   subscribeSession(sessionId);
   return sessionId;
+}
+
+// El anfitrión marca su disponibilidad en la entrada del lobby: si se
+// desconecta (o cierra pestaña), la partida queda "en gris" en el listado
+// en vez de desaparecer, y puede volver reconectando
+export function armHostOnline(sessionId) {
+  if (!db) return;
+
+  const sid = sessionId || state.sessionId;
+  if (!sid) return;
+
+  const apply = () => {
+    const flagRef = ref(db, `lobby/${sid}/hostOnline`);
+    onDisconnect(flagRef).set(false);
+    set(flagRef, true);
+  };
+  hostOnlineApply = apply;
+  apply();
 }
 
 export function joinSession(sessionId) {
@@ -125,7 +147,7 @@ export function attachPresence() {
     onDisconnect(presenceRef).set(false);
     set(presenceRef, true);
   };
-  sessionRegistrations = [apply];
+  sessionPresenceApply = apply;
   apply();
 }
 
@@ -195,7 +217,8 @@ function subscribeSession(sessionId) {
 function detachSession() {
   sessionUnsubs.forEach((unsub) => unsub());
   sessionUnsubs = [];
-  sessionRegistrations = [];
+  sessionPresenceApply = null;
+  hostOnlineApply = null;
 }
 
 export function disconnect() {

@@ -445,10 +445,27 @@ h1.game-title { text-align: center; color: var(--text-strong); margin: 0 0 10px 
 /* Casillas apagadas: el fondo se funde con el color de la fila (alpha solo en
    el fondo), y el texto conserva toda su opacidad con un tono por fila */
 .cell.dimmed { background-color: var(--cell-dimmed-bg) !important; color: var(--text-faint) !important; pointer-events: none !important; border-color: transparent !important; }
+.cell.disabled { cursor: not-allowed; }
 .row.red .cell.dimmed { color: var(--dim-red) !important; }
 .row.yellow .cell.dimmed { color: var(--dim-yellow) !important; }
 .row.green .cell.dimmed { color: var(--dim-green) !important; }
 .row.blue .cell.dimmed { color: var(--dim-blue) !important; }
+
+/* Casillas ya no marcables (a la izquierda de la última marca, o fila cerrada):
+   se muestran como guión desde el momento de marcar, incluso sin validar.
+   Van después de las reglas por fila de .dimmed para ganar en el cascade. */
+.row .cell.dimmed.passed { color: transparent !important; }
+.row .cell.passed::after {
+    content: "-";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -55%);
+    color: var(--text-faint);
+    font-weight: 800;
+    line-height: 1;
+    pointer-events: none;
+}
 .cell.disabled { cursor: not-allowed; }
 .cell.lock { border-radius: 50%; font-size: 13px; }
 

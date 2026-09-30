@@ -34,7 +34,9 @@ export function renderBoard() {
       cell.classList.toggle('selectable-white', targets.white.has(key));
       cell.classList.toggle('selectable-color', targets.color.has(key));
       cell.classList.toggle('dimmed', !marked && !isSelectable);
+      const passed = !marked && val !== LOCK_VAL && (closed || idx < maxMarkedIdx);
       cell.classList.toggle('disabled', !marked && (closed || idx < maxMarkedIdx));
+      cell.classList.toggle('passed', passed);
     });
   });
 

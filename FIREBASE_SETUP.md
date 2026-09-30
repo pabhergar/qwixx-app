@@ -29,7 +29,8 @@ jugadores de una partida. La lógica de autoridad sigue en el host.
        "lobby":    { ".read": true,  ".write": true },
        "events":   { ".read": true,  ".write": true },
        "presence": { ".read": true,  ".write": true },
-       "online":   { ".read": true,  ".write": true }
+       "online":   { ".read": true,  ".write": true },
+       "tabs":     { ".read": true,  ".write": true }
      }
    }
    ```
@@ -50,6 +51,7 @@ lobby/{sesionId}              { hostName, hostUserId, status: lobby|started|fini
 events/{sesionId}/{eventoId}  { sender: userId, createdAt, payload: { type, ... } }
 presence/{sesionId}/{userId}  true | false
 online/{userId}/{tabId}       { name: string|null, status: lobby|playing, since }
+tabs/{userId}                 { tabId, since }
 ```
 
 - `lobby` — listado "Partidas disponibles" (listener en vivo en todos los clientes).
@@ -70,6 +72,8 @@ online/{userId}/{tabId}       { name: string|null, status: lobby|playing, since 
   pestaña (`online/{userId}/{tabId}`) y agregada por usuario al mostrar: quién
   tiene la página abierta y si está disponible o en partida. Se re-escribe en
   cada reconexión (`.info/connected`) y se limpia sola vía `onDisconnect`.
+- `tabs` — liderazgo de pestaña por usuario: con varias pestañas del mismo
+  navegador, la partida vive en la pestaña visible; las demás quedan pasivas.
 
 ## Notas
 

@@ -146,6 +146,16 @@ export function enterGameScreens() {
   if (gameArea) gameArea.style.display = 'block';
 }
 
+export function showTabOverlay() {
+  const overlay = document.getElementById('tab-overlay');
+  if (overlay) overlay.style.display = 'flex';
+}
+
+export function hideTabOverlay() {
+  const overlay = document.getElementById('tab-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
 export function showGameBrowser() {
   document.getElementById('net-setup').style.display = 'flex';
   document.getElementById('lobby-list-section').style.display = 'block';

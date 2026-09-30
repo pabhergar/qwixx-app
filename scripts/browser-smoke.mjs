@@ -11,7 +11,8 @@ const lobby = async () => {
 };
 
 const browser = await firefox.launch();
-const page = await browser.newPage();
+const context = await browser.newContext();
+const page = await context.newPage();
 
 const logs = [];
 page.on('console', (msg) => logs.push(`[${msg.type()}] ${msg.text().slice(0, 300)}`));
@@ -39,6 +40,23 @@ await page.waitForTimeout(5000);
 console.log('reconectado a sesión:', await page.isVisible('#host-controls'));
 console.log('título sala contiene SmokeTest:', (await page.textContent('#display-host-name')) === 'SmokeTest');
 console.log('errores de página tras reload:', logs.filter((l) => l.includes('PAGEERROR')).length);
+
+console.log('== escenario: segunda pestaña del mismo navegador ==');
+const page2 = await context.newPage();
+const logs2 = [];
+page2.on('console', (m) => logs2.push(`[${m.type()}] ${m.text().slice(0, 200)}`));
+page2.on('pageerror', (e) => logs2.push(`[PAGEERROR] ${String(e).slice(0, 300)}`));
+await page2.goto(APP_URL);
+await page2.bringToFront();
+await page2.waitForTimeout(5000);
+console.log('pestaña 2 reconectada a la partida (host-controls):', await page2.isVisible('#host-controls'));
+console.log('pestaña 2 en sesión (título):', await page2.textContent('#display-host-name'));
+await page.waitForTimeout(2000);
+console.log('pestaña 1 relegada (overlay visible):', await page.isVisible('#tab-overlay'));
+const errors2 = logs2.filter((l) => l.includes('PAGEERROR'));
+console.log('errores de página en pestaña 2:', errors2.length);
+errors2.slice(0, 5).forEach((l) => console.log(' ', l));
+await page2.close();
 
 console.log('== crear #2 (debería bloquearse) ==');
 await page.click('#btn-create-room').catch(() => {});

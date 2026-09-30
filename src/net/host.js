@@ -38,7 +38,7 @@ export function handleHandshake(data) {
     return reject(data.userId, 'Nombre en uso en esta sala.');
   }
   if (state.playersList.some((p) => p.userId === data.userId)) {
-    return reject(data.userId, 'Ya tienes esta partida abierta en otra ventana.');
+    return reject(data.userId, 'Ya estás en esta partida en otra pestaña de este navegador. Vuelve a esa pestaña o ciérrala.');
   }
 
   const playerId = nextPlayerId();
@@ -51,7 +51,9 @@ export function handleHandshake(data) {
   saveSession();
 }
 
-// Reconexión tras refresco o microcorte: el jugador ya estaba en la partida
+// Reconexión tras refresco o microcorte: el jugador ya estaba en la partida.
+// Otra pestaña del mismo navegador también puede reconectar: el liderazgo de
+// pestañas (transport) deja una sola como activa.
 export function handleRejoin(data) {
   const entry = state.playersList.find((p) => p.userId === data.userId);
 
@@ -60,9 +62,6 @@ export function handleRejoin(data) {
   }
   if (!entry) {
     return reject(data.userId, 'Ya no estás en esta partida.');
-  }
-  if (state.presence[entry.userId] === true) {
-    return reject(data.userId, 'Ya tienes la partida abierta en otra ventana.');
   }
 
   broadcast(buildWelcome(data.userId, entry.id));

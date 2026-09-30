@@ -195,6 +195,31 @@ h1.game-title { text-align: center; color: var(--text-strong); margin: 0 0 10px 
 .online-list li .unnamed { color: var(--text-faint); font-style: italic; }
 .online-status { font-size: 11px; color: var(--text-muted); white-space: nowrap; align-self: center; }
 
+/* PESTAÑA RELEGADA: la partida sigue en otra pestaña del mismo navegador */
+.tab-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 400;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--page-bg) 92%, transparent);
+    padding: 16px;
+}
+.tab-overlay-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+}
+.tab-overlay-card h3 { margin: 0 0 8px; color: var(--text-strong); font-size: 17px; }
+.tab-overlay-card p { margin: 0 0 14px; color: var(--text); font-size: 14px; line-height: 1.4; }
+.tab-overlay-card .modal-btn { width: 100%; }
+
 @media (max-width: 768px) {
     body.in-game h1.game-title {
         display: none !important;

@@ -1,6 +1,6 @@
 import { state } from './model/state.js';
 import { getUserId } from './model/identity.js';
-import { initTransport } from './net/transport.js';
+import { initTransport, initTabLeadership, onTabActivity } from './net/transport.js';
 import { initNetworkMessaging } from './net/messages.js';
 import { initPresenceHandling } from './net/presence.js';
 import { initOnlinePresence, setOnlineName } from './net/online.js';
@@ -9,7 +9,7 @@ import {
   initLobbyListener, tryReconnect, createGame, joinGame, startGame, leaveSession, exitGame, deleteOwnGame
 } from './actions/session.js';
 import { rollDice, handleCellClick, validateTurn } from './actions/turn.js';
-import { toggleWaitPanel, hideWaitPanel } from './ui/hud.js';
+import { toggleWaitPanel, hideWaitPanel, showTabOverlay, hideTabOverlay } from './ui/hud.js';
 import { toggleOnlinePopover, hideOnlinePopover } from './ui/online.js';
 import { initFullscreenButton } from './ui/fullscreen.js';
 
@@ -27,6 +27,11 @@ window.addEventListener('DOMContentLoaded', () => {
   initPresenceHandling();
   initLobbyListener();
   initOnlinePresence();
+  initTabLeadership();
+
+  onTabActivity((active) => (active ? hideTabOverlay() : showTabOverlay()));
+
+  document.getElementById('btn-tab-resume').addEventListener('click', () => window.location.reload());
 
   document.getElementById('online-badge').addEventListener('click', (e) => {
     e.stopPropagation();

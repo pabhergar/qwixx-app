@@ -22,11 +22,15 @@ let db = null;
 let payloadHandler = null;
 let statusHandler = null;
 let presenceHandler = null;
+let tabActivityHandler = null;
 let sessionUnsubs = [];
 let globalRegistrations = [];
 let sessionPresenceApply = null;
+let sessionPresenceOp = null;
 let hostOnlineApply = null;
 let hostOnlineOp = null;
+let activeTab = true;
+let tabClaimOp = null;
 
 export function initTransport() {
   const app = initializeApp(firebaseConfig);
@@ -53,6 +57,72 @@ export function onSessionStatus(fn) {
 
 export function onPresence(fn) {
   presenceHandler = fn;
+}
+
+export function onTabActivity(fn) {
+  tabActivityHandler = fn;
+}
+
+// Liderazgo de pestaña: con varias pestañas del mismo navegador, la partida
+// vive en la pestaña visible. Las demás se vuelven pasivas (no escriben) y,
+// al mirarlas de nuevo, se recargan y recuperan el mando.
+export function initTabLeadership() {
+  if (!db) return;
+  const claimRef = ref(db, `tabs/${getUserId()}`);
+
+  const writeClaim = () => {
+    tabClaimOp = onDisconnect(claimRef);
+    tabClaimOp.remove();
+    set(claimRef, { tabId: getTabId(), since: Date.now() });
+  };
+
+  const claimIfVisible = () => {
+    if (document.hidden) return;
+    writeClaim();
+  };
+
+  onValue(claimRef, (snap) => {
+    const val = snap.val();
+    if (val && val.tabId && val.tabId !== getTabId()) demoteTab();
+    else promoteTab();
+  }, (err) => console.warn('Error escuchando el liderazgo de pestañas:', err.message));
+
+  // Al recuperar el foco una pestaña relegada, lo más limpio es recargar:
+  // arranca como líder y restaura el tablero desde localStorage (compartido)
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    if (!activeTab) {
+      window.location.reload();
+      return;
+    }
+    writeClaim();
+  });
+
+  globalRegistrations.push(() => {
+    if (activeTab) writeClaim();
+  });
+
+  claimIfVisible();
+}
+
+function demoteTab() {
+  if (!activeTab) return;
+  activeTab = false;
+  if (sessionPresenceOp) sessionPresenceOp.cancel().catch(() => {});
+  sessionPresenceOp = null;
+  if (hostOnlineOp) hostOnlineOp.cancel().catch(() => {});
+  hostOnlineOp = null;
+  if (tabClaimOp) tabClaimOp.cancel().catch(() => {});
+  tabClaimOp = null;
+  if (tabActivityHandler) tabActivityHandler(false);
+}
+
+function promoteTab() {
+  const wasInactive = !activeTab;
+  activeTab = true;
+  if (wasInactive && tabActivityHandler) tabActivityHandler(true);
+  if (sessionPresenceApply) sessionPresenceApply();
+  if (hostOnlineApply) hostOnlineApply();
 }
 
 // Listado en vivo de partidas para todos los clientes conectados.
@@ -128,12 +198,14 @@ export function armHostOnline(sessionId) {
   const sid = sessionId || state.sessionId;
   if (!sid) return;
 
-  const flagRef = ref(db, `lobby/${sid}/hostOnline`);
-  hostOnlineOp = onDisconnect(flagRef);
-  hostOnlineOp.set(false);
-  set(flagRef, true);
-
-  hostOnlineApply = () => armHostOnline(sid);
+  hostOnlineApply = () => {
+    if (!activeTab) return;
+    const flagRef = ref(db, `lobby/${sid}/hostOnline`);
+    hostOnlineOp = onDisconnect(flagRef);
+    hostOnlineOp.set(false);
+    set(flagRef, true);
+  };
+  hostOnlineApply();
 }
 
 export function joinSession(sessionId) {
@@ -145,18 +217,21 @@ export function joinSession(sessionId) {
 export function attachPresence() {
   if (!db || !state.sessionId) return;
 
-  const apply = () => {
-    if (!state.sessionId) return;
-    const presenceRef = ref(db, `presence/${state.sessionId}/${getUserId()}`);
-    onDisconnect(presenceRef).set(false);
+  const sid = state.sessionId;
+  const uid = getUserId();
+
+  sessionPresenceApply = () => {
+    if (!state.sessionId || !activeTab) return;
+    const presenceRef = ref(db, `presence/${sid}/${uid}`);
+    sessionPresenceOp = onDisconnect(presenceRef);
+    sessionPresenceOp.set(false);
     set(presenceRef, true);
   };
-  sessionPresenceApply = apply;
-  apply();
+  sessionPresenceApply();
 }
 
 export function broadcast(data) {
-  if (!db || !state.sessionId) return;
+  if (!db || !state.sessionId || !activeTab) return;
   push(ref(db, `events/${state.sessionId}`), {
     sender: getUserId(),
     createdAt: serverTimestamp(),
@@ -165,7 +240,7 @@ export function broadcast(data) {
 }
 
 export function updateLobbyEntry(fields) {
-  if (!db || !state.sessionId) return;
+  if (!db || !state.sessionId || !activeTab) return;
   update(ref(db, `lobby/${state.sessionId}`), fields);
 }
 
@@ -173,6 +248,7 @@ export function updateLobbyEntry(fields) {
 // listado). Se cancela antes el onDisconnect de hostOnline, o reaparecería un
 // huérfano { hostOnline: false } al caer la conexión.
 export function removeSession() {
+  if (!activeTab) return;
   removeSessionById(state.sessionId);
 }
 

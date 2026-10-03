@@ -68,7 +68,7 @@ export function onTabActivity(fn) {
 // al mirarlas de nuevo, se recargan y recuperan el mando.
 export function initTabLeadership() {
   if (!db) return;
-  const claimRef = ref(db, `tabs/${getUserId()}`);
+  const claimRef = ref(db, `tabs/v2/${getUserId()}`);
 
   const writeClaim = () => {
     tabClaimOp = onDisconnect(claimRef);
@@ -171,13 +171,14 @@ export function listenOnline(cb) {
   }, (err) => console.warn('Error escuchando usuarios conectados:', err.message));
 }
 
-export function createSession(hostName) {
+export function createSession(hostName, game) {
   const sessionRef = push(ref(db, 'lobby'));
   const sessionId = sessionRef.key;
 
   set(sessionRef, {
     hostName,
     hostUserId: getUserId(),
+    game: game || 'qwixx',
     status: 'lobby',
     hostOnline: true,
     createdAt: Date.now(),

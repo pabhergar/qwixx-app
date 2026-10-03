@@ -1,5 +1,6 @@
 import { state, activePlayerName } from '../model/state.js';
 import { isMyTurn, isForcedPenalty, hasNoWhiteOption } from '../logic/rules.js';
+import { GAMES, getGame } from '../games/registry.js';
 
 // Render de paneles de control, listas de jugadores y pantallas de lobby.
 export function renderTurnControls() {
@@ -91,7 +92,7 @@ export function renderGamesList() {
   if (!ul) return;
 
   const available = state.lobbyGames
-    .filter((g) => g.status === 'lobby' && !g.game)
+    .filter((g) => g.status === 'lobby' && !!g.game)
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
   ul.innerHTML = '';
@@ -104,7 +105,7 @@ export function renderGamesList() {
     const li = document.createElement('li');
     li.className = `game-item${hostAway ? ' grayed' : ''}`;
     li.innerHTML = `
-      <span class="game-info"><b>Partida de ${escapeHtml(g.hostName)}</b>
+      <span class="game-info"><b>Partida de ${escapeHtml(g.hostName)}</b> <span class="game-chip">${getGame(g.game)?.name || g.game}</span>
         <span class="game-meta">${hostAway ? '⏳ Esperando al anfitrión' : `${count} jugador${count === 1 ? '' : 'es'}`}</span>
       </span>
       ${isMine
@@ -178,4 +179,45 @@ export function showSessionAsClient(hostName) {
   document.getElementById('display-host-name').innerText = hostName;
   document.getElementById('host-controls').style.display = 'none';
   document.getElementById('client-waiting').style.display = 'block';
+}
+
+// Selector de juego al crear una nueva partida
+export function renderGamePicker(onPick) {
+  const picker = document.getElementById('game-picker');
+  if (!picker) return;
+  picker.innerHTML = '';
+
+  GAMES.forEach((g) => {
+    const btn = document.createElement('button');
+    btn.className = 'game-picker-btn' + (g.available ? '' : ' disabled');
+    btn.disabled = !g.available;
+
+    const name = document.createElement('span');
+    name.className = 'game-picker-name';
+    name.innerText = g.name;
+
+    const desc = document.createElement('span');
+    desc.className = 'game-picker-desc';
+    desc.innerText = g.description;
+
+    btn.appendChild(name);
+    btn.appendChild(desc);
+    if (g.available) {
+      btn.addEventListener('click', () => {
+        hideGamePicker();
+        onPick(g.id);
+      });
+    }
+    picker.appendChild(btn);
+  });
+}
+
+export function showGamePicker() {
+  const modal = document.getElementById('game-picker-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+export function hideGamePicker() {
+  const modal = document.getElementById('game-picker-modal');
+  if (modal) modal.style.display = 'none';
 }

@@ -16,6 +16,7 @@ function buildWelcome(targetUserId, playerId) {
     playerId,
     players: state.playersList,
     activePlayerId: state.activePlayerId,
+    game: state.game,
     gameStarted: state.gameStarted,
     dice: state.dice,
     hasRolled: state.turn.hasRolled,

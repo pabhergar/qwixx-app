@@ -30,6 +30,7 @@ export function createState() {
   return {
     userId: '',
     sessionId: '',
+    game: 'qwixx',
     isHost: false,
     myPlayerId: 'P1',
     myPlayerName: '',
@@ -66,6 +67,7 @@ export function resetTurn() {
 // Vuelve al estado "fuera de partida" (la identidad y el tablero se conservan)
 export function resetSessionState() {
   state.sessionId = '';
+  state.game = 'qwixx';
   state.isHost = false;
   state.myPlayerId = 'P1';
   state.gameStarted = false;
@@ -107,6 +109,7 @@ export function restoreTurn(turnData) {
 
 export function restoreHostState(hostState) {
   if (!hostState) return;
+  if (hostState.game) state.game = hostState.game;
   state.playersList = hostState.playersList || [];
   state.activePlayerId = hostState.activePlayerId || 'P1';
   state.gameStarted = !!hostState.gameStarted;

@@ -9,7 +9,8 @@ import {
   initLobbyListener, tryReconnect, createGame, joinGame, startGame, leaveSession, exitGame, deleteOwnGame
 } from './actions/session.js';
 import { rollDice, handleCellClick, validateTurn } from './actions/turn.js';
-import { toggleWaitPanel, hideWaitPanel, showTabOverlay, hideTabOverlay } from './ui/hud.js';
+import { toggleWaitPanel, hideWaitPanel, showTabOverlay, hideTabOverlay, showGamePicker, hideGamePicker, renderGamePicker } from './ui/hud.js';
+import { showAlert } from './ui/modals.js';
 import { toggleOnlinePopover, hideOnlinePopover } from './ui/online.js';
 import { initFullscreenButton } from './ui/fullscreen.js';
 
@@ -47,7 +48,19 @@ window.addEventListener('DOMContentLoaded', () => {
 
   initFullscreenButton();
 
-  document.getElementById('btn-create-room').addEventListener('click', createGame);
+  document.getElementById('btn-create-room').addEventListener('click', () => {
+    const nameInput = document.getElementById('player-name-input');
+    if (!nameInput.value.trim()) {
+      showAlert('Introduce tu nombre antes de empezar.');
+      nameInput.focus();
+      return;
+    }
+    renderGamePicker((gameId) => createGame(gameId));
+    showGamePicker();
+  });
+  document.getElementById('game-picker-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'game-picker-modal') hideGamePicker();
+  });
   document.getElementById('btn-start-game').addEventListener('click', startGame);
   document.getElementById('btn-leave-lobby').addEventListener('click', leaveSession);
   document.getElementById('btn-roll-dice').addEventListener('click', rollDice);

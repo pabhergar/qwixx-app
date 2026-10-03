@@ -104,6 +104,7 @@ function applyWelcome(data) {
   const savedTurnCounter = state.turnCounter;
 
   state.myPlayerId = data.playerId;
+  if (data.game) state.game = data.game;
   state.playersList = data.players;
   state.activePlayerId = data.activePlayerId;
   state.turnCounter = data.turn ?? savedTurnCounter;

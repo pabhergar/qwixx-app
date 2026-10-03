@@ -6,7 +6,7 @@
     <meta name="color-scheme" content="light dark">
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e6eaf2">
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f172a">
-    <title>Qwixx Online</title>
+    <title>Multijuegos Online</title>
     <link rel="stylesheet" href="./src/css/style.css">
 </head>
 <body>
@@ -26,7 +26,7 @@
     </div>
 </div>
 <div class="board-container">
-    <h1 class="game-title">Qwixx Online</h1>
+    <h1 class="game-title">Multijuegos Online</h1>
 
     <!-- MODAL FIN DE PARTIDA -->
     <div class="modal-overlay" id="game-over-modal">
@@ -58,6 +58,14 @@
         </div>
     </div>
 
+    <!-- SELECTOR DE JUEGO (Nueva Partida) -->
+    <div class="modal-overlay" id="game-picker-modal">
+        <div class="modal-content" style="max-width: 380px;">
+            <h3 class="modal-h">¿A qué jugáis?</h3>
+            <div class="game-picker" id="game-picker"></div>
+        </div>
+    </div>
+
     <!-- MODAL CONFIRM -->
     <div class="modal-overlay" id="custom-confirm-modal">
         <div class="modal-content" style="max-width: 380px;">
@@ -74,7 +82,7 @@
     <div class="network-bar">
         <div class="network-controls" id="net-setup">
             <input type="text" id="player-name-input" class="net-input name" placeholder="Tu Nombre" maxlength="12">
-            <button class="net-btn" id="btn-create-room">Crear Partida</button>
+            <button class="net-btn" id="btn-create-room">Nueva Partida</button>
         </div>
 
         <div id="lobby-list-section" class="lobby-card">

@@ -22,8 +22,10 @@ partida) vive en la rama `multijuegos`, visible en `/preview/multijuegos/`.
 
 ## Notas
 
-- Cada despliegue reemplaza el artefacto entero: solo la **última** rama de preview
-  queda publicada en `/preview/`. Trabaja una rama a la vez.
+- El sitio desplegado completo vive en la rama `site` (la crea el propio workflow):
+  cada push actualiza solo su porción, de modo que **los previews persisten entre
+  despliegues** y pueden convivir varios a la vez. Cuando eliminas una rama, su
+  preview se poda en el siguiente despliegue.
 - El entorno `github-pages` permite desplegar desde cualquier rama
   (política de ramas `*`, configurada vía API; por defecto GitHub solo permite `main`).
 - Builds multi-archivo con assets con hash (caché inmutable); sin `singlefile`.

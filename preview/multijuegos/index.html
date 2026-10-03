@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e6eaf2">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f172a">
+    <title>Multijuegos Online</title>
+  <script type="module" crossorigin src="./assets/index-BEgqVVBm.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-Bb87Uwaf.css">
+</head>
+<body>
+<button class="fullscreen-btn" id="btn-fullscreen" title="Pantalla completa">⛶</button>
+<div class="online-badge" id="online-badge" title="Personas conectadas a la app">
+    <span class="online-dot"></span><span id="online-count">0</span>
+</div>
+<div class="online-popover" id="online-popover">
+    <div class="online-popover-title">En la app ahora</div>
+    <ul class="online-list" id="online-list"></ul>
+</div>
+<div class="tab-overlay" id="tab-overlay" style="display: none;">
+    <div class="tab-overlay-card">
+        <h3>La partida sigue en otra pestaña</h3>
+        <p>Este navegador tiene la partida abierta en otra pestaña, que es la activa ahora mismo.</p>
+        <button class="modal-btn modal-btn-primary" id="btn-tab-resume">Continuar en esta pestaña</button>
+    </div>
+</div>
+<div class="board-container">
+    <h1 class="game-title">Multijuegos Online</h1>
+
+    <!-- MODAL FIN DE PARTIDA -->
+    <div class="modal-overlay" id="game-over-modal">
+      <div class="modal-content">
+        <h2>🏆 Fin de la Partida</h2>
+        <div id="game-over-reason"></div>
+        
+        <div class="table-wrapper">
+          <table class="leaderboard-table">
+            <thead>
+              <tr><th>Pos</th><th>Jugador</th><th>Puntos</th></tr>
+            </thead>
+            <tbody id="leaderboard-body"></tbody>
+          </table>
+        </div>
+
+        <button class="modal-btn modal-btn-primary" id="btn-modal-exit">Volver al Inicio</button>
+      </div>
+    </div>
+
+    <!-- MODAL ALERT -->
+    <div class="modal-overlay" id="custom-alert-modal">
+        <div class="modal-content" style="max-width: 380px;">
+            <h3 id="alert-title" class="modal-h">Atención</h3>
+            <p id="alert-message" class="modal-msg"></p>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-primary" id="btn-close-alert">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SELECTOR DE JUEGO (Nueva Partida) -->
+    <div class="modal-overlay" id="game-picker-modal">
+        <div class="modal-content" style="max-width: 380px;">
+            <h3 class="modal-h">¿A qué jugáis?</h3>
+            <div class="game-picker" id="game-picker"></div>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIRM -->
+    <div class="modal-overlay" id="custom-confirm-modal">
+        <div class="modal-content" style="max-width: 380px;">
+            <h3 id="confirm-title" class="modal-h">Confirmar acción</h3>
+            <p id="confirm-message" class="modal-msg"></p>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-secondary" id="btn-confirm-cancel">Cancelar</button>
+                <button class="modal-btn modal-btn-success" id="btn-confirm-ok">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOBBY & LISTADO DE PARTIDAS -->
+    <div class="network-bar">
+        <div class="network-controls" id="net-setup">
+            <input type="text" id="player-name-input" class="net-input name" placeholder="Tu Nombre" maxlength="12">
+            <button class="net-btn" id="btn-create-room">Nueva Partida</button>
+        </div>
+
+        <div id="lobby-list-section" class="lobby-card">
+            <div class="lobby-list-title">Partidas disponibles</div>
+            <ul id="games-list" class="games-list"></ul>
+            <div id="no-games-placeholder" class="no-games-placeholder" style="display: none;">No hay partidas en este momento</div>
+        </div>
+
+        <div class="lobby-section lobby-card" id="lobby-section">
+            <h3>Partida de <span id="display-host-name" class="room-code-display"></span></h3>
+            <div style="text-align: left; margin-bottom: 5px; font-size: 13px; font-weight: bold; color: #475569;">Jugadores en sala:</div>
+            <ul id="player-list" class="player-list"></ul>
+
+            <div id="host-controls" style="display: none; margin-top: 15px;">
+                <button class="net-btn" id="btn-start-game" style="background:#10b981; width: 100%; font-size: 16px;">▶ Iniciar Partida</button>
+            </div>
+
+            <div id="client-waiting" class="waiting-text" style="display: none;">
+                ⏳ Esperando a que el anfitrión inicie la partida...
+            </div>
+
+            <button class="btn-secondary-action" id="btn-leave-lobby" style="margin-top: 10px;">← Abandonar sala</button>
+        </div>
+    </div>
+
+    <!-- ÁREA PRINCIPAL DE JUEGO -->
+    <div id="game-area">
+        <div class="game-layout">
+
+            <!-- ESTADO Y DADOS -->
+            <div class="dice-panel">
+                <div class="dice-status-msg" id="dice-status-msg"></div>
+                <div class="dice-container" id="dice-container">
+                    <div class="die white1" id="die-w1">⚀</div>
+                    <div class="die white2" id="die-w2">⚀</div>
+                    <div class="die red" id="die-r">⚀</div>
+                    <div class="die yellow" id="die-y">⚀</div>
+                    <div class="die green" id="die-g">⚀</div>
+                    <div class="die blue" id="die-b">⚀</div>
+                </div>
+            </div>
+
+            <!-- TABLERO -->
+            <div class="board-rows">
+                <div class="row red" id="row-red">
+                    <div class="cell" data-val="2">2</div><div class="cell" data-val="3">3</div><div class="cell" data-val="4">4</div><div class="cell" data-val="5">5</div><div class="cell" data-val="6">6</div><div class="cell" data-val="7">7</div><div class="cell" data-val="8">8</div><div class="cell" data-val="9">9</div><div class="cell" data-val="10">10</div><div class="cell" data-val="11">11</div><div class="cell" data-val="12">12</div><div class="cell lock" data-val="lock">🔒</div>
+                </div>
+
+                <div class="row yellow" id="row-yellow">
+                    <div class="cell" data-val="2">2</div><div class="cell" data-val="3">3</div><div class="cell" data-val="4">4</div><div class="cell" data-val="5">5</div><div class="cell" data-val="6">6</div><div class="cell" data-val="7">7</div><div class="cell" data-val="8">8</div><div class="cell" data-val="9">9</div><div class="cell" data-val="10">10</div><div class="cell" data-val="11">11</div><div class="cell" data-val="12">12</div><div class="cell lock" data-val="lock">🔒</div>
+                </div>
+
+                <div class="row green" id="row-green">
+                    <div class="cell" data-val="12">12</div><div class="cell" data-val="11">11</div><div class="cell" data-val="10">10</div><div class="cell" data-val="9">9</div><div class="cell" data-val="8">8</div><div class="cell" data-val="7">7</div><div class="cell" data-val="6">6</div><div class="cell" data-val="5">5</div><div class="cell" data-val="4">4</div><div class="cell" data-val="3">3</div><div class="cell" data-val="2">2</div><div class="cell lock" data-val="lock">🔒</div>
+                </div>
+
+                <div class="row blue" id="row-blue">
+                    <div class="cell" data-val="12">12</div><div class="cell" data-val="11">11</div><div class="cell" data-val="10">10</div><div class="cell" data-val="9">9</div><div class="cell" data-val="8">8</div><div class="cell" data-val="7">7</div><div class="cell" data-val="6">6</div><div class="cell" data-val="5">5</div><div class="cell" data-val="4">4</div><div class="cell" data-val="3">3</div><div class="cell" data-val="2">2</div><div class="cell lock" data-val="lock">🔒</div>
+                </div>
+            </div>
+
+            <!-- PUNTUACIÓN Y FALTAS -->
+            <div class="bottom-section">
+                <div class="penalties-container">
+                    <span class="penalties-label">Faltas (-5):</span>
+                    <div class="penalty-box"></div><div class="penalty-box"></div><div class="penalty-box"></div><div class="penalty-box"></div>
+                </div>
+                <div class="score-calculator">
+                    <div class="score-box red-total" id="total-red">0</div><span>+</span>
+                    <div class="score-box yellow-total" id="total-yellow">0</div><span>+</span>
+                    <div class="score-box green-total" id="total-green">0</div><span>+</span>
+                    <div class="score-box blue-total" id="total-blue">0</div><span>-</span>
+                    <div class="score-box penalty-total" id="total-penalty">0</div><span>=</span>
+                    <div class="score-box final-total" id="total-final">0</div>
+                </div>
+                <button class="btn-exit" id="btn-exit-game">Salir</button>
+            </div>
+
+            <!-- ACCIONES -->
+            <div class="action-panel" id="action-panel">
+                <div class="action-btn-group">
+                    <button class="btn-roll" id="btn-roll-dice">Lanzar</button>
+                    <button class="btn-validate" id="btn-validate-turn">Validar</button>
+                    <button class="btn-players-icon" id="btn-show-players" title="Ver Jugadores">👥</button>
+                </div>
+            </div>
+
+            <!-- JUGADORES (overlay: tarjeta en horizontal, hoja inferior en vertical) -->
+            <div class="wait-panel" id="wait-panel">
+                <div class="wait-title">Jugadores en sala</div>
+                <ul class="player-list" id="turn-wait-list"></ul>
+                <button class="btn-secondary-action" id="btn-return-actions">Volver</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+</body>
+</html>

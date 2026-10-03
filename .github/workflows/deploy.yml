@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: ['**']
   workflow_dispatch:
 
 permissions:
@@ -26,6 +26,23 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+
+      # Las ramas que no son main se publican como snapshot en /preview/<rama>/,
+      # manteniendo la release (/) y la integración (/test) con el contenido de main
+      - name: Publicar snapshot de rama
+        if: github.ref != 'refs/heads/main'
+        run: |
+          SLUG=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          mkdir -p /tmp/snap
+          cp -r dist/. /tmp/snap/
+          git fetch origin main
+          git reset --hard origin/main
+          npm ci
+          npm run build
+          mkdir -p "dist/preview/$SLUG"
+          cp -r /tmp/snap/. "dist/preview/$SLUG/"
+          echo "::notice::Preview disponible en /preview/$SLUG/ (y /preview/$SLUG/test/)"
+
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist

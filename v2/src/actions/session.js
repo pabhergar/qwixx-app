@@ -73,11 +73,11 @@ function getAndValidateName() {
 
 function hasOwnActiveGame() {
   return state.lobbyGames.some((g) =>
-    !g.game && g.hostUserId === state.userId && (g.status === 'lobby' || g.status === 'started')
+    g.game && g.hostUserId === state.userId && (g.status === 'lobby' || g.status === 'started')
   );
 }
 
-export function createGame() {
+export function createGame(gameId) {
   const name = getAndValidateName();
   if (!name) return;
   if (hasOwnActiveGame()) {
@@ -88,8 +88,9 @@ export function createGame() {
   state.isHost = true;
   state.myPlayerId = 'P1';
   state.playersList = [{ id: 'P1', userId: state.userId, name }];
+  state.game = gameId;
   state.sessionJoined = true;
-  state.sessionId = transport.createSession(name);
+  state.sessionId = transport.createSession(name, gameId);
   transport.attachPresence();
   setOnlineStatus('playing');
   requestAutoFullscreen();
@@ -105,8 +106,7 @@ export function joinGame(sessionId) {
   if (state.sessionJoined || state.reconnecting) return;
 
   const game = state.lobbyGames.find((g) => g.id === sessionId);
-  if (!game || game.status !== 'lobby') return showAlert('Esa partida ya no está disponible.');
-  if (game.game) return showAlert('Esa partida pertenece a la nueva versión (/test).');
+  if (!game || game.status !== 'lobby' || !game.game) return showAlert('Esa partida ya no está disponible.');
   if (game.hostOnline === false) return showAlert('El anfitrión no está conectado. Podrás unirte cuando vuelva.');
 
   state.myPlayerName = name;
@@ -151,13 +151,14 @@ export function tryReconnect() {
 
   whenLobbyReady(() => {
     const game = state.lobbyGames.find((g) => g.id === saved.sessionId);
-    const alive = !!game && !game.game && (game.status === 'lobby' || game.status === 'started');
+    const alive = !!game && !!game.game && (game.status === 'lobby' || game.status === 'started');
     if (!alive) {
       clearSession();
       return;
     }
 
     state.sessionId = saved.sessionId;
+    state.game = saved.game || 'qwixx';
     state.isHost = saved.isHost;
     state.myPlayerId = saved.myPlayerId;
     state.myPlayerName = saved.name || state.myPlayerName;

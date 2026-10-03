@@ -2,11 +2,11 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ['**']
+    branches: ['**', '!site']
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -27,25 +29,55 @@ jobs:
       - run: npm test
       - run: npm run build
 
-      # Las ramas que no son main se publican como snapshot en /preview/<rama>/,
-      # manteniendo la release (/) y la integración (/test) con el contenido de main
-      - name: Publicar snapshot de rama
-        if: github.ref != 'refs/heads/main'
+      # El sitio desplegado vive en la rama 'site'. Cada push actualiza solo su
+      # porción: main reemplaza la raíz (conservando previews), y cualquier otra
+      # rama (re)publica su snapshot en /preview/<rama>/. Los previews de ramas
+      # eliminadas se podan automáticamente.
+      - name: Actualizar rama site
         run: |
+          set -e
           SLUG=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9._-]/-/g')
-          mkdir -p /tmp/snap
-          cp -r dist/. /tmp/snap/
-          git fetch origin main
-          git reset --hard origin/main
-          npm ci
-          npm run build
-          mkdir -p "dist/preview/$SLUG"
-          cp -r /tmp/snap/. "dist/preview/$SLUG/"
-          echo "::notice::Preview disponible en /preview/$SLUG/ (y /preview/$SLUG/test/)"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git rev-parse --verify origin/site >/dev/null 2>&1; then
+            git fetch origin site --depth=1
+            git worktree add /tmp/site origin/site
+          else
+            git worktree add --detach /tmp/site
+            (cd /tmp/site && git checkout --orphan site && git rm -rf --quiet . 2>/dev/null || true)
+          fi
+
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            find /tmp/site -mindepth 1 -maxdepth 1 ! -name preview -exec rm -rf {} +
+            cp -r dist/. /tmp/site/
+          else
+            rm -rf "/tmp/site/preview/$SLUG"
+            mkdir -p "/tmp/site/preview/$SLUG"
+            cp -r dist/. "/tmp/site/preview/$SLUG/"
+          fi
+
+          for d in /tmp/site/preview/*/; do
+            [ -d "$d" ] || continue
+            name=$(basename "$d")
+            if [ "$name" != "$SLUG" ] && ! git ls-remote --exit-code --heads origin "$name" >/dev/null 2>&1; then
+              echo "Poda: preview de rama eliminada '$name'"
+              rm -rf "$d"
+            fi
+          done
+
+          cd /tmp/site
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Sin cambios en el sitio"
+          else
+            git commit -m "deploy: ${{ github.ref_name }} @ ${{ github.sha }}"
+            git push origin HEAD:refs/heads/site
+          fi
 
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: dist
+          path: /tmp/site
 
   deploy:
     needs: build

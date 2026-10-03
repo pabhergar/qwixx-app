@@ -23,6 +23,8 @@ URL base: `https://pabhergar.github.io/qwixx-app/...`
 
 - Cada despliegue reemplaza el artefacto entero: solo la **última** rama de preview
   queda publicada en `/preview/`. Trabaja una rama a la vez.
+- El entorno `github-pages` permite desplegar desde cualquier rama
+  (política de ramas `*`, configurada vía API; por defecto GitHub solo permite `main`).
 - Builds multi-archivo con assets con hash (caché inmutable); sin `singlefile`.
 - Ambas versiones comparten proyecto Firebase (lobby con campo `game` por partida,
   identidad de usuario y badge de conectados globales; claves de sesión y liderazgo

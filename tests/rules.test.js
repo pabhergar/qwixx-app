@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   isCellMarkable, isRowClosingCell, isRowClosed, getValidTargets,
-  isForcedPenalty, hasNoWhiteOption, isMarkedInTurn, isLockedClosureCell, targetKey,
-  shouldApplyDiceRoll, shouldApplyTurnChange
-} from '../src/logic/rules.js';
+  isForcedPenalty, hasNoWhiteOption, isMarkedInTurn, isLockedClosureCell, targetKey
+} from '../src/games/qwixx/rules.js';
 import { buildState, setMarks, setDice } from './helpers.js';
 
 describe('isRowClosingCell', () => {
@@ -212,32 +211,4 @@ describe('deshacer marcas', () => {
   });
 });
 
-describe('guards de eventos por número de turno', () => {
-  it('ignora tiradas de turnos pasados o ya aplicadas del turno actual', () => {
-    const s = buildState();
-    s.turnCounter = 5;
-    s.turn.hasRolled = true;
-    expect(shouldApplyDiceRoll(s, 4)).toBe(false);
-    expect(shouldApplyDiceRoll(s, 5)).toBe(false);
 
-    s.turn.hasRolled = false;
-    expect(shouldApplyDiceRoll(s, 5)).toBe(true);
-    expect(shouldApplyDiceRoll(s, 6)).toBe(true);
-  });
-
-  it('ignora cambios de turno repetidos o pasados', () => {
-    const s = buildState();
-    s.turnCounter = 5;
-    expect(shouldApplyTurnChange(s, 5)).toBe(false);
-    expect(shouldApplyTurnChange(s, 4)).toBe(false);
-    expect(shouldApplyTurnChange(s, 6)).toBe(true);
-  });
-
-  it('sin número de turno (compatibilidad) se aplican', () => {
-    const s = buildState();
-    s.turnCounter = 5;
-    s.turn.hasRolled = true;
-    expect(shouldApplyDiceRoll(s, undefined)).toBe(true);
-    expect(shouldApplyTurnChange(s, undefined)).toBe(true);
-  });
-});

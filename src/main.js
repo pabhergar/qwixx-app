@@ -5,17 +5,18 @@ import { initNetworkMessaging } from './net/messages.js';
 import { initPresenceHandling } from './net/presence.js';
 import { initOnlinePresence, setOnlineName } from './net/online.js';
 import { kickPlayer } from './net/host.js';
+import { requestValidation } from './framework/validation.js';
+import { getActiveGame } from './games/registry.js';
 import {
   initLobbyListener, tryReconnect, createGame, joinGame, startGame, leaveSession, exitGame, deleteOwnGame
 } from './actions/session.js';
-import { rollDice, handleCellClick, validateTurn } from './actions/turn.js';
 import { toggleWaitPanel, hideWaitPanel, showTabOverlay, hideTabOverlay, showGamePicker, hideGamePicker, renderGamePicker } from './ui/hud.js';
-import { showAlert } from './ui/modals.js';
 import { toggleOnlinePopover, hideOnlinePopover } from './ui/online.js';
 import { initFullscreenButton } from './ui/fullscreen.js';
+import { showAlert } from './ui/modals.js';
 
-// Bootstrap: wiring de eventos. Toda la lógica vive en actions/, flow/, logic/,
-// model/ y net/.
+// Bootstrap del shell multi-juego: wiring de eventos. Los sistemas (dados,
+// turnos, validación) viven en framework/ y cada juego en games/.
 
 window.addEventListener('DOMContentLoaded', () => {
   state.userId = getUserId();
@@ -32,8 +33,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
   onTabActivity((active) => (active ? hideTabOverlay() : showTabOverlay()));
 
-  document.getElementById('btn-tab-resume').addEventListener('click', () => window.location.reload());
-
   document.getElementById('online-badge').addEventListener('click', (e) => {
     e.stopPropagation();
     toggleOnlinePopover();
@@ -49,7 +48,6 @@ window.addEventListener('DOMContentLoaded', () => {
   initFullscreenButton();
 
   document.getElementById('btn-create-room').addEventListener('click', () => {
-    const nameInput = document.getElementById('player-name-input');
     if (!nameInput.value.trim()) {
       showAlert('Introduce tu nombre antes de empezar.');
       nameInput.focus();
@@ -61,14 +59,22 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('game-picker-modal').addEventListener('click', (e) => {
     if (e.target.id === 'game-picker-modal') hideGamePicker();
   });
+
   document.getElementById('btn-start-game').addEventListener('click', startGame);
   document.getElementById('btn-leave-lobby').addEventListener('click', leaveSession);
-  document.getElementById('btn-roll-dice').addEventListener('click', rollDice);
-  document.getElementById('btn-validate-turn').addEventListener('click', validateTurn);
-  document.getElementById('btn-exit-game').addEventListener('click', () => exitGame(false));
+  document.getElementById('btn-roll-dice').addEventListener('click', () => {
+    const game = getActiveGame();
+    if (game && game.actions && game.actions.rollDice) game.actions.rollDice();
+  });
+  document.getElementById('btn-validate-turn').addEventListener('click', requestValidation);
   document.getElementById('btn-modal-exit').addEventListener('click', () => exitGame(true));
   document.getElementById('btn-show-players').addEventListener('click', toggleWaitPanel);
   document.getElementById('btn-return-actions').addEventListener('click', hideWaitPanel);
+
+  // El botón de salir lo renderiza el juego dentro de su tablero: delegación
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('#btn-exit-game')) exitGame(false);
+  });
 
   document.getElementById('games-list').addEventListener('click', (e) => {
     const del = e.target.closest('button[data-delete-id]');
@@ -86,9 +92,13 @@ window.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('game-area').addEventListener('click', (e) => {
     const cell = e.target.closest('.cell');
-    if (cell) handleCellClick(cell);
+    if (!cell) return;
+    const game = getActiveGame();
+    if (game && game.actions && game.actions.handleCellClick) game.actions.handleCellClick(cell);
   });
 
-  // Refresco o microcorte con una partida en marcha: reincorporación
   tryReconnect();
+
+  // Marker para smoke tests / e2e: la app está lista para interacción
+  window.__multijuegosReady = true;
 });

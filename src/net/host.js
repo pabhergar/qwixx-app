@@ -1,13 +1,12 @@
 import { state, nextPlayerId } from '../model/state.js';
 import { saveSession } from '../model/storage.js';
 import { broadcast, updateLobbyEntry } from './transport.js';
-import {
-  flowClosureAlert, flowTurnChanged, flowPlayerLeft, checkGameOverLocal
-} from '../flow.js';
+import { flowPlayerLeft } from '../flow.js';
 import { renderPlayers } from '../ui/hud.js';
 
-// Lógica de autoridad del host: admisión de jugadores, reconexiones y cierre
-// de turnos. Solo la ejecuta el cliente con state.isHost === true.
+// Autoridad del host: admisión de jugadores, reconexiones y expulsiones.
+// La colección de validaciones y el avance de turno (agnósticos del juego)
+// viven en framework/validation.js.
 
 function buildWelcome(targetUserId, playerId) {
   return {
@@ -66,41 +65,6 @@ export function handleRejoin(data) {
   }
 
   broadcast(buildWelcome(data.userId, entry.id));
-}
-
-export function processValidation(playerId, playerName, pendingClosedRows = [], turn) {
-  if (turn !== undefined && turn !== state.turnCounter) return;
-
-  const newClosure = pendingClosedRows.find((color) => !state.declaredClosures.has(color));
-
-  if (newClosure) {
-    state.declaredClosures.add(newClosure);
-    const alert = {
-      type: 'ROW_CLOSURE_ALERT',
-      closingPlayerId: playerId,
-      closingPlayerName: playerName,
-      color: newClosure,
-      declaredClosures: Array.from(state.declaredClosures)
-    };
-    flowClosureAlert(alert);
-    broadcast(alert);
-    return;
-  }
-
-  state.validatedPlayers.add(playerId);
-  broadcast({ type: 'VALIDATION_UPDATE', validatedList: Array.from(state.validatedPlayers) });
-  renderPlayers();
-
-  if (state.validatedPlayers.size >= state.playersList.length) {
-    const closedRows = Array.from(state.declaredClosures);
-    const playerIds = state.playersList.map((p) => p.id);
-    const nextPlayer = playerIds[(playerIds.indexOf(state.activePlayerId) + 1) % playerIds.length];
-    const nextTurn = state.turnCounter + 1;
-
-    broadcast({ type: 'TURN_CHANGED', nextPlayer, closedRows, turn: nextTurn });
-    flowTurnChanged(nextPlayer, closedRows, nextTurn);
-    checkGameOverLocal();
-  }
 }
 
 // El host puede expulsar a un jugador desconectado para desbloquear la partida

@@ -1,4 +1,4 @@
-import { COLORS, MAX_PENALTIES } from '../constants.js';
+import { COLORS, MAX_PENALTIES } from '../games/qwixx/constants.js';
 
 // Única fuente de verdad del juego. El DOM es una proyección de este estado.
 // Estructura:

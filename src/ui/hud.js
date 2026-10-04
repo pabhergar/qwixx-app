@@ -1,5 +1,6 @@
 import { state, activePlayerName } from '../model/state.js';
-import { isMyTurn, isForcedPenalty, hasNoWhiteOption } from '../logic/rules.js';
+import { isMyTurn } from '../framework/turns.js';
+import { getActiveGame } from '../games/registry.js';
 import { GAMES, getGame } from '../games/registry.js';
 
 // Render de paneles de control, listas de jugadores y pantallas de lobby.
@@ -23,6 +24,9 @@ export function renderTurnControls() {
   }
 
   const btnRoll = document.getElementById('btn-roll-dice');
+  const game = getActiveGame();
+  const hints = game && game.hints ? game.hints(state) : {};
+
   const btnValidate = document.getElementById('btn-validate-turn');
 
   if (!state.turn.hasRolled) {
@@ -53,8 +57,8 @@ export function renderTurnControls() {
   if (btnValidate) {
     btnValidate.classList.remove('forced-penalty-red', 'forced-penalty-blue');
     if (state.turn.hasRolled && state.turn.marked.length === 0) {
-      if (isForcedPenalty(state)) btnValidate.classList.add('forced-penalty-red');
-      else if (hasNoWhiteOption(state)) btnValidate.classList.add('forced-penalty-blue');
+      if (hints.forcedRed) btnValidate.classList.add('forced-penalty-red');
+      else if (hints.forcedBlue) btnValidate.classList.add('forced-penalty-blue');
     }
   }
 

@@ -1,6 +1,6 @@
 import { state } from '../model/state.js';
 import { attachGlobalPresence, updateOnlineEntry, listenOnline } from './transport.js';
-import { aggregateOnlineUsers } from '../logic/online.js';
+import { aggregateOnlineUsers } from '../framework/online.js';
 import { renderOnline } from '../ui/online.js';
 
 // Presencia global de la app: badge de "cuántos hay conectados" y estado

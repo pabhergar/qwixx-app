@@ -272,6 +272,8 @@ h1.game-title { text-align: center; color: var(--text-strong); margin: 0 0 10px 
     align-items: stretch;
 }
 .dice-panel { grid-area: dice; }
+/* Tablero del juego activo: el framework solo conoce este mount */
+.game-mount { grid-area: board; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .board-rows { grid-area: board; }
 .bottom-section { grid-area: bottom; }
 .action-panel { grid-area: actions; align-self: end; display: flex; }

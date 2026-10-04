@@ -2,7 +2,6 @@ export const COLORS = ['red', 'yellow', 'green', 'blue'];
 
 export const COLOR_NAMES_ES = { red: 'ROJO', yellow: 'AMARILLO', green: 'VERDE', blue: 'AZUL' };
 
-export const DICE_FACES = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
 
 export const SCORE_TABLE = { 0: 0, 1: 1, 2: 3, 3: 6, 4: 10, 5: 15, 6: 21, 7: 28, 8: 36, 9: 45, 10: 55, 11: 66, 12: 78 };
 
@@ -24,4 +23,4 @@ export const ROW_VALUES = {
   blue: ['12', '11', '10', '9', '8', '7', '6', '5', '4', '3', '2']
 };
 
-export const DIE_KEY_BY_COLOR = { red: 'r', yellow: 'y', green: 'g', blue: 'b' };
+export { DIE_KEY_BY_COLOR, COLOR_BY_DIE_KEY } from './dice.js';

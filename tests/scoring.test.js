@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeScores, getGameOverReason } from '../src/logic/scoring.js';
+import { computeScores, getGameOverReason } from '../src/games/qwixx/scoring.js';
 import { createBoard } from '../src/model/state.js';
 
 describe('computeScores', () => {

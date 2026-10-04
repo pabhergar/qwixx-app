@@ -1,29 +1,24 @@
+import { state, addBoardMark, removeBoardMark, addPenalty } from '../../model/state.js';
+import { saveSession } from '../../model/storage.js';
+import { broadcast } from '../../net/transport.js';
+import { rollDiceValues } from '../../framework/dice.js';
 import {
-  state, addBoardMark, removeBoardMark, addPenalty
-} from '../model/state.js';
-import { saveSession } from '../model/storage.js';
-import { broadcast } from '../net/transport.js';
-import { processValidation } from '../net/host.js';
-import {
-  getValidTargets, isMyTurn, isForcedPenalty, isRowClosingCell,
+  getValidTargets, isForcedPenalty, isRowClosingCell,
   isMarkedInTurn, isLockedClosureCell, targetKey
-} from '../logic/rules.js';
-import { flowDiceRolled, renderGame } from '../flow.js';
-import { showAlert, showConfirm } from '../ui/modals.js';
-import { COLOR_NAMES_ES, LOCK_VAL, ROW_VALUES } from '../constants.js';
+} from './rules.js';
+import { flowDiceRolled, renderGame } from '../../flow.js';
+import { showAlert, showConfirm } from '../../ui/modals.js';
+import { COLOR_NAMES_ES, LOCK_VAL, ROW_VALUES } from './constants.js';
+import { QWIXX_DICE } from './dice.js';
 
-// Acciones de juego iniciadas por el usuario: lanzar dados, marcar/desmarcar
-// casillas y validar el turno.
+// Acciones de Qwixx iniciadas por el usuario: tirar, marcar/desmarcar y la
+// penalización por pasar sin marcar. La validación (genérica) vive en el
+// framework; este módulo aporta los ganchos del juego.
 
 export function rollDice() {
   if (!state.gameStarted || state.myPlayerId !== state.activePlayerId || state.turn.hasRolled) return;
 
-  const dice = {
-    w1: Math.floor(Math.random() * 6) + 1, w2: Math.floor(Math.random() * 6) + 1,
-    r: Math.floor(Math.random() * 6) + 1, y: Math.floor(Math.random() * 6) + 1,
-    g: Math.floor(Math.random() * 6) + 1, b: Math.floor(Math.random() * 6) + 1
-  };
-
+  const dice = rollDiceValues(QWIXX_DICE);
   flowDiceRolled(dice, state.turnCounter);
   saveSession();
   broadcast({ type: 'DICE_ROLLED', dice, turn: state.turnCounter });
@@ -75,8 +70,6 @@ function handleUndoClick(color, val) {
   }
   if (!isMarkedInTurn(state, color, val)) return;
 
-  // Deshacer la última casilla o el candado de un cierre pendiente
-  // deshace ambos y cancela el cierre
   if ((val === LOCK_VAL || isRowClosingCell(color, val)) && state.turn.pendingClosedRows.has(color)) {
     const closingVal = isRowClosingCell(color, val) ? val : ROW_VALUES[color][ROW_VALUES[color].length - 1];
     removeBoardMark(color, closingVal);
@@ -95,40 +88,15 @@ function handleUndoClick(color, val) {
   saveSession();
 }
 
-export async function validateTurn() {
-  if (!state.gameStarted || state.gameOverTriggered || state.turn.hasValidated) return;
-
-  const myTurn = isMyTurn(state);
-
-  if (!state.turn.hasRolled) {
-    if (myTurn) return showAlert('Debes lanzar los dados antes de validar tu turno.');
-    return showAlert('Debes esperar a que el jugador activo lance los dados.');
-  }
-
-  if (myTurn && state.turn.marked.length === 0) {
-    if (isForcedPenalty(state)) {
-      await showAlert('Como no tienes combinaciones posibles con la tirada actual, cometes una falta obligatoria (-5 pts).', 'Sin Combinaciones Válidas');
-    } else {
-      const confirmPenalty = await showConfirm('No has marcado ninguna casilla en tu turno. ¿Deseas pasar y anotarte una falta (-5 pts)?', 'Anotar Falta');
-      if (!confirmPenalty) return;
-    }
-    addPenalty();
-  }
-
-  state.turn.hasValidated = true;
-  renderGame();
-
-  const pendingClosedRows = Array.from(state.turn.pendingClosedRows);
-
-  if (state.isHost) {
-    processValidation(state.myPlayerId, state.myPlayerName, pendingClosedRows, state.turnCounter);
+// Gancho del framework: el jugador activo pasa sin marcar (falta opcional
+// si no hay jugadas posibles, confirmada en caso contrario)
+export async function onPass() {
+  if (isForcedPenalty(state)) {
+    await showAlert('Como no tienes combinaciones posibles con la tirada actual, cometes una falta obligatoria (-5 pts).', 'Sin Combinaciones Válidas');
   } else {
-    broadcast({
-      type: 'PLAYER_VALIDATED',
-      playerId: state.myPlayerId,
-      playerName: state.myPlayerName,
-      pendingClosedRows,
-      turn: state.turnCounter
-    });
+    const confirmPenalty = await showConfirm('No has marcado ninguna casilla en tu turno. ¿Deseas pasar y anotarte una falta (-5 pts)?', 'Anotar Falta');
+    if (!confirmPenalty) return false;
   }
+  addPenalty();
+  return true;
 }

@@ -1,6 +1,5 @@
-import {
-  COLORS, ROW_VALUES, DIE_KEY_BY_COLOR, LOCK_VAL, MIN_MARKS_TO_CLOSE
-} from '../constants.js';
+import { COLORS, ROW_VALUES, DIE_KEY_BY_COLOR, LOCK_VAL, MIN_MARKS_TO_CLOSE } from './constants.js';
+import { isMyTurn } from '../../framework/turns.js';
 
 // Funciones puras: reciben un objeto con la forma de `state` (ver model/state.js)
 // y nunca tocan el DOM ni mutan el estado.
@@ -41,10 +40,6 @@ export function isCellMarkable(board, color, val) {
   if (idx === values.length - 1 && countRowMarks(board, color, { includeLock: false }) < MIN_MARKS_TO_CLOSE) return false;
 
   return true;
-}
-
-export function isMyTurn(st) {
-  return st.myPlayerId === st.activePlayerId;
 }
 
 export function getValidTargets(st) {
@@ -101,17 +96,3 @@ export function isLockedClosureCell(st, color, val) {
   return st.turn.myLockedClosures.has(color) && (val === LOCK_VAL || isRowClosingCell(color, val));
 }
 
-// Guards de eventos con número de turno: hacen idempotentes los replays y
-// permiten aplicar eventos que ocurrieron mientras se estuvo desconectado.
-
-export function shouldApplyDiceRoll(st, turn) {
-  if (turn === undefined || turn === null) return true;
-  if (turn < st.turnCounter) return false;
-  if (turn === st.turnCounter && st.turn.hasRolled) return false;
-  return true;
-}
-
-export function shouldApplyTurnChange(st, turn) {
-  if (turn === undefined || turn === null) return true;
-  return turn > st.turnCounter;
-}

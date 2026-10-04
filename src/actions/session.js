@@ -3,6 +3,7 @@ import { saveSession, clearSession, loadSavedSession } from '../model/storage.js
 import * as transport from '../net/transport.js';
 import { enterGame, renderGame } from '../flow.js';
 import { clearPresenceWatchdog } from '../net/presence.js';
+import { shuffleOrder } from '../framework/turns.js';
 import { setOnlineName, setOnlineStatus } from '../net/online.js';
 import {
   renderPlayers, renderGamesList,
@@ -127,6 +128,8 @@ export async function startGame() {
     if (!confirmSolo) return;
   }
 
+  // Orden de juego aleatorio: nadie (ni el anfitrión) empieza siempre
+  state.playersList = shuffleOrder(state.playersList);
   state.activePlayerId = state.playersList[0].id;
   state.gameStarted = true;
   state.turnCounter = 1;

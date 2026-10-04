@@ -1,21 +1,22 @@
 import { state, resetTurn, closeBoardRows } from './model/state.js';
 import { saveSession } from './model/storage.js';
 import { broadcast, updateLobbyEntry } from './net/transport.js';
-import { computeScores, getGameOverReason } from './logic/scoring.js';
-import { shouldApplyDiceRoll, shouldApplyTurnChange } from './logic/rules.js';
-import { COLOR_NAMES_ES } from './constants.js';
-import { renderBoard, renderScores, renderDice } from './ui/board.js';
+import { shouldApplyDiceRoll, shouldApplyTurnChange } from './framework/turns.js';
+import { renderDicePanel } from './framework/dice.js';
+import { getActiveGame } from './games/registry.js';
 import { renderTurnControls, renderPlayers, enterGameScreens } from './ui/hud.js';
-import { showAlert, showGameOverModal } from './ui/modals.js';
+import { showGameOverModal } from './ui/modals.js';
 
-// Transiciones de partida compartidas por host y clientes:
-// cada mensaje de red o acción local pasa por aquí para mutar el estado
-// y repintar la UI. El DOM siempre se deriva del modelo.
+// Transiciones de partida compartidas por host y clientes (agnósticas del
+// juego: la UI específica se repinta vía el contrato del juego activo).
 
 export function renderGame() {
-  renderBoard();
-  renderScores();
-  renderDice();
+  const game = getActiveGame();
+  if (game && game.ui) {
+    if (game.ui.renderBoard) game.ui.renderBoard();
+    if (game.ui.renderScores) game.ui.renderScores();
+  }
+  renderDicePanel();
   renderTurnControls();
   renderPlayers();
 }
@@ -25,6 +26,7 @@ export function enterGame() {
   enterGameScreens();
   renderGame();
 }
+
 export function flowDiceRolled(dice, turn) {
   if (!shouldApplyDiceRoll(state, turn)) return;
   resetTurn();
@@ -61,42 +63,30 @@ export function flowPlayerLeft(data) {
   saveSession();
 }
 
-export function flowClosureAlert(alert) {
-  (alert.declaredClosures || []).forEach((color) => {
-    state.declaredClosures.add(color);
-    if (state.turn.pendingClosedRows.has(color)) state.turn.myLockedClosures.add(color);
-  });
-
-  state.validatedPlayers.clear();
-  state.validatedPlayers.add(alert.closingPlayerId);
-
-  if (alert.closingPlayerId !== state.myPlayerId) {
-    state.turn.hasValidated = false;
-    showAlert(
-      `¡Atención! ${alert.closingPlayerName} va a cerrar el color ${COLOR_NAMES_ES[alert.color] || alert.color}.\n\nSe han cancelado las validaciones del turno para que podáis reevaluar vuestra jugada.`,
-      '🔒 Fila Cerrada'
-    );
-  }
-
-  renderGame();
-}
-
 export function checkGameOverLocal() {
   if (state.gameOverTriggered) return true;
 
-  const reason = getGameOverReason(state.board, state.myPlayerName);
+  const game = getActiveGame();
+  const reason = game && game.gameOverReason ? game.gameOverReason() : null;
   if (!reason) return false;
 
   state.gameOverTriggered = true;
   submitMyScore();
-  broadcast({ type: 'GAME_OVER', reason, playerId: state.myPlayerId, playerName: state.myPlayerName, score: state.scores[state.myPlayerId].score });
+  broadcast({
+    type: 'GAME_OVER',
+    reason,
+    playerId: state.myPlayerId,
+    playerName: state.myPlayerName,
+    score: state.scores[state.myPlayerId].score
+  });
   if (state.isHost) updateLobbyEntry({ status: 'finished' });
   showGameOverModal(reason);
   return true;
 }
 
 export function submitMyScore() {
-  const score = computeScores(state.board).total;
+  const game = getActiveGame();
+  const score = game && game.finalScore ? game.finalScore() : 0;
   state.scores[state.myPlayerId] = { id: state.myPlayerId, name: state.myPlayerName, score };
   broadcast({ type: 'SUBMIT_SCORE', playerId: state.myPlayerId, playerName: state.myPlayerName, score });
 }

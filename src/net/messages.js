@@ -2,8 +2,9 @@ import { state, resetTurn } from '../model/state.js';
 import { saveSession } from '../model/storage.js';
 import * as transport from './transport.js';
 import * as host from './host.js';
+import { hostProcessValidation, applyRoundDisruption } from '../framework/validation.js';
 import {
-  enterGame, flowDiceRolled, flowTurnChanged, flowClosureAlert, flowPlayerLeft,
+  enterGame, flowDiceRolled, flowTurnChanged, flowPlayerLeft,
   checkGameOverLocal, submitMyScore, renderGame
 } from '../flow.js';
 import { renderPlayers, showSessionAsClient } from '../ui/hud.js';
@@ -28,7 +29,7 @@ function routePayload(data) {
     if (data.type === 'HANDSHAKE') return host.handleHandshake(data);
     if (data.type === 'REJOIN') return host.handleRejoin(data);
     if (data.type === 'PLAYER_VALIDATED') {
-      return host.processValidation(data.playerId, data.playerName, data.pendingClosedRows, data.turn);
+      return hostProcessValidation(data.playerId, data.playerName, data.gameData, data.turn);
     }
   }
   handleNetworkData(data);
@@ -70,7 +71,7 @@ function handleNetworkData(data) {
       break;
 
     case 'ROW_CLOSURE_ALERT':
-      flowClosureAlert(data);
+      applyRoundDisruption(data);
       break;
 
     case 'VALIDATION_UPDATE':

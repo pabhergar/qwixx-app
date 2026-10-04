@@ -1,4 +1,4 @@
-import { COLORS, SCORE_TABLE, PENALTY_POINTS, MAX_PENALTIES, ROWS_TO_END_GAME } from '../constants.js';
+import { COLORS, SCORE_TABLE, PENALTY_POINTS, MAX_PENALTIES, ROWS_TO_END_GAME } from './constants.js';
 
 // Funciones puras sobre el tablero (ver model/state.js).
 

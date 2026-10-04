@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { aggregateOnlineUsers } from '../src/logic/online.js';
+import { aggregateOnlineUsers } from '../src/framework/online.js';
 
 describe('aggregateOnlineUsers', () => {
   it('una entrada por usuario, con las pestañas colapsadas', () => {

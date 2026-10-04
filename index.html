@@ -115,51 +115,11 @@
             <!-- ESTADO Y DADOS -->
             <div class="dice-panel">
                 <div class="dice-status-msg" id="dice-status-msg"></div>
-                <div class="dice-container" id="dice-container">
-                    <div class="die white1" id="die-w1">⚀</div>
-                    <div class="die white2" id="die-w2">⚀</div>
-                    <div class="die red" id="die-r">⚀</div>
-                    <div class="die yellow" id="die-y">⚀</div>
-                    <div class="die green" id="die-g">⚀</div>
-                    <div class="die blue" id="die-b">⚀</div>
-                </div>
-            </div>
+                <div class="dice-container" id="dice-container"></div>
+        </div>
 
-            <!-- TABLERO -->
-            <div class="board-rows">
-                <div class="row red" id="row-red">
-                    <div class="cell" data-val="2">2</div><div class="cell" data-val="3">3</div><div class="cell" data-val="4">4</div><div class="cell" data-val="5">5</div><div class="cell" data-val="6">6</div><div class="cell" data-val="7">7</div><div class="cell" data-val="8">8</div><div class="cell" data-val="9">9</div><div class="cell" data-val="10">10</div><div class="cell" data-val="11">11</div><div class="cell" data-val="12">12</div><div class="cell lock" data-val="lock">🔒</div>
-                </div>
-
-                <div class="row yellow" id="row-yellow">
-                    <div class="cell" data-val="2">2</div><div class="cell" data-val="3">3</div><div class="cell" data-val="4">4</div><div class="cell" data-val="5">5</div><div class="cell" data-val="6">6</div><div class="cell" data-val="7">7</div><div class="cell" data-val="8">8</div><div class="cell" data-val="9">9</div><div class="cell" data-val="10">10</div><div class="cell" data-val="11">11</div><div class="cell" data-val="12">12</div><div class="cell lock" data-val="lock">🔒</div>
-                </div>
-
-                <div class="row green" id="row-green">
-                    <div class="cell" data-val="12">12</div><div class="cell" data-val="11">11</div><div class="cell" data-val="10">10</div><div class="cell" data-val="9">9</div><div class="cell" data-val="8">8</div><div class="cell" data-val="7">7</div><div class="cell" data-val="6">6</div><div class="cell" data-val="5">5</div><div class="cell" data-val="4">4</div><div class="cell" data-val="3">3</div><div class="cell" data-val="2">2</div><div class="cell lock" data-val="lock">🔒</div>
-                </div>
-
-                <div class="row blue" id="row-blue">
-                    <div class="cell" data-val="12">12</div><div class="cell" data-val="11">11</div><div class="cell" data-val="10">10</div><div class="cell" data-val="9">9</div><div class="cell" data-val="8">8</div><div class="cell" data-val="7">7</div><div class="cell" data-val="6">6</div><div class="cell" data-val="5">5</div><div class="cell" data-val="4">4</div><div class="cell" data-val="3">3</div><div class="cell" data-val="2">2</div><div class="cell lock" data-val="lock">🔒</div>
-                </div>
-            </div>
-
-            <!-- PUNTUACIÓN Y FALTAS -->
-            <div class="bottom-section">
-                <div class="penalties-container">
-                    <span class="penalties-label">Faltas (-5):</span>
-                    <div class="penalty-box"></div><div class="penalty-box"></div><div class="penalty-box"></div><div class="penalty-box"></div>
-                </div>
-                <div class="score-calculator">
-                    <div class="score-box red-total" id="total-red">0</div><span>+</span>
-                    <div class="score-box yellow-total" id="total-yellow">0</div><span>+</span>
-                    <div class="score-box green-total" id="total-green">0</div><span>+</span>
-                    <div class="score-box blue-total" id="total-blue">0</div><span>-</span>
-                    <div class="score-box penalty-total" id="total-penalty">0</div><span>=</span>
-                    <div class="score-box final-total" id="total-final">0</div>
-                </div>
-                <button class="btn-exit" id="btn-exit-game">Salir</button>
-            </div>
+        <!-- TABLERO (lo construye el juego activo) -->
+            <div class="game-mount" id="game-mount"></div>
 
             <!-- ACCIONES -->
             <div class="action-panel" id="action-panel">
